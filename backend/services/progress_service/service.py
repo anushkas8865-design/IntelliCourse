@@ -159,3 +159,75 @@ def update_progress(
 
     finally:
         db.close()
+
+
+def get_user_progress(user_id):
+    db = SessionLocal()
+
+    try:
+        # ---------------------------------------------------------
+        # Get all progress records for the user
+        # ---------------------------------------------------------
+
+        progress_records = (
+            db.query(UserProgress)
+            .filter(
+                UserProgress.user_id == user_id
+            )
+            .all()
+        )
+
+        progress_list = []
+
+        for progress in progress_records:
+
+            # -----------------------------------------------------
+            # Get course information
+            # -----------------------------------------------------
+
+            course = (
+                db.query(Course)
+                .filter(
+                    Course.course_id == progress.course_id
+                )
+                .first()
+            )
+
+            # -----------------------------------------------------
+            # Count total lessons
+            # -----------------------------------------------------
+
+            total_lessons = (
+                db.query(Lesson)
+                .filter(
+                    Lesson.course_id == progress.course_id
+                )
+                .count()
+            )
+
+            progress_list.append({
+                "progress_id": progress.progress_id,
+                "user_id": progress.user_id,
+                "course_id": progress.course_id,
+                "course_title": course.title if course else None,
+                "completed_lessons": progress.completed_lessons,
+                "total_lessons": total_lessons,
+                "quiz_score": progress.quiz_score,
+                "progress_percentage": progress.progress_percentage
+            })
+
+        return {
+            "user_id": user_id,
+            "progress": progress_list,
+            "status_code": 200
+        }
+
+    except Exception as error:
+        return {
+            "message": "Failed to retrieve progress.",
+            "error": str(error),
+            "status_code": 500
+        }
+
+    finally:
+        db.close()

@@ -218,8 +218,18 @@ def get_all_courses(user_id):
             .all()
         )
 
-        return [
-            {
+        course_list = []
+
+        for course in courses:
+            total_lessons = (
+                db.query(Lesson)
+                .filter(
+                    Lesson.course_id == course.course_id
+                )
+                .count()
+            )
+
+            course_list.append({
                 "course_id": course.course_id,
                 "user_id": course.user_id,
                 "title": course.title,
@@ -227,9 +237,10 @@ def get_all_courses(user_id):
                 "difficulty": course.difficulty,
                 "duration": f"{course.duration} weeks",
                 "learning_outcomes": course.learning_outcomes,
-            }
-            for course in courses
-        ]
+                "total_lessons": total_lessons,
+            })
+
+        return course_list
 
     finally:
         db.close()

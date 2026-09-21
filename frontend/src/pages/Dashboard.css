@@ -159,8 +159,16 @@
 }
 
 .profile-arrow {
+  border: none;
+  background: transparent;
   color: #71809d;
   font-size: 17px;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+
+.profile-arrow:hover {
+  color: #5b3eea;
 }
 
 /* Content */
@@ -462,6 +470,27 @@
   font-size: 12px;
 }
 
+.progress-stat-button {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.progress-stat-button:hover {
+  color: #5b3eea;
+}
+
+.progress-stat-button:hover .stat-icon {
+  transform: translateY(-1px);
+}
+
+.progress-stat-button .stat-icon {
+  transition: transform 0.15s ease;
+}
+
 .progress-stat strong {
   margin-left: auto;
   color: #263657;
@@ -646,4 +675,18 @@
   .continue-button {
     margin-left: 0;
   }
+}
+
+.logout-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #dc3545;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background: #bb2d3b;
 }

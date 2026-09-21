@@ -1,0 +1,95 @@
+.lesson-page {
+  min-height: 100vh;
+  background: #f7f8fc;
+  padding: 40px;
+  color: #172554;
+}
+
+.lesson-container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.lesson-header {
+  margin-bottom: 24px;
+}
+
+.lesson-header h1 {
+  margin: 0 0 8px;
+  color: #172554;
+  font-size: 32px;
+}
+
+.lesson-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.lesson-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.lesson-card h2 {
+  margin: 0 0 16px;
+  color: #172554;
+  font-size: 21px;
+}
+
+.lesson-card p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.lesson-video-placeholder {
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #eef0f6;
+  color: #64748b;
+  text-align: center;
+  padding: 20px;
+}
+
+.lesson-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.lesson-primary-button {
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  background: #5b2ee6;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lesson-primary-button:hover {
+  background: #4c22c7;
+}
+
+@media (max-width: 650px) {
+  .lesson-page {
+    padding: 24px 18px;
+  }
+
+  .lesson-card {
+    padding: 22px;
+  }
+
+  .lesson-header h1 {
+    font-size: 27px;
+  }
+}

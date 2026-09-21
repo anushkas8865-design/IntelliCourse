@@ -1,0 +1,117 @@
+.create-course-page {
+  min-height: 100vh;
+  background: #f7f8fc;
+  padding: 40px;
+  color: #172554;
+}
+
+.create-course-container {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+.create-course-header {
+  margin-bottom: 28px;
+}
+
+.create-course-header h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 700;
+  color: #172554;
+}
+
+.create-course-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 15px;
+}
+
+.create-course-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 32px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+
+.create-course-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.create-course-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.create-course-field label {
+  color: #172554;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.create-course-field input,
+.create-course-field select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  border: 1px solid #dbe1ea;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #172554;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.create-course-field input:focus,
+.create-course-field select:focus {
+  border-color: #6d3df5;
+  box-shadow: 0 0 0 3px rgba(109, 61, 245, 0.1);
+}
+
+.create-course-submit {
+  margin-top: 8px;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 20px;
+  background: #5b2ee6;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.create-course-submit:hover {
+  background: #4c22c7;
+}
+
+.create-course-info {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f7f4ff;
+  color: #5b2ee6;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .create-course-page {
+    padding: 24px 18px;
+  }
+
+  .create-course-card {
+    padding: 22px;
+  }
+
+  .create-course-header h1 {
+    font-size: 27px;
+  }
+}

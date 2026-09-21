@@ -1,7 +1,10 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
-from services.progress_service.service import update_progress
+from services.progress_service.service import (
+    update_progress,
+    get_user_progress
+)
 
 
 progress_routes = Blueprint(
@@ -47,6 +50,35 @@ def update_user_progress():
         completed_lessons=completed_lessons,
         quiz_score=quiz_score
     )
+
+    status_code = result.pop("status_code", 200)
+
+    return jsonify(result), status_code
+
+
+@progress_routes.route("/api/progress/<user_id>", methods=["GET"])
+@jwt_required()
+def get_user_progress_route(user_id):
+    # ---------------------------------------------------------
+    # Get logged-in user from JWT
+    # ---------------------------------------------------------
+
+    logged_in_user_id = get_jwt_identity()
+
+    # ---------------------------------------------------------
+    # Prevent users from viewing another user's progress
+    # ---------------------------------------------------------
+
+    if user_id != logged_in_user_id:
+        return jsonify({
+            "message": "You are not authorized to view this progress."
+        }), 403
+
+    # ---------------------------------------------------------
+    # Get progress
+    # ---------------------------------------------------------
+
+    result = get_user_progress(user_id)
 
     status_code = result.pop("status_code", 200)
 
