@@ -161,13 +161,16 @@ def parse_duration(duration):
     return int(match.group())
 
 
-def get_course_by_id(course_id):
+def get_course_by_id(course_id, user_id):
     db = SessionLocal()
 
     try:
         course = (
             db.query(Course)
-            .filter(Course.course_id == course_id)
+            .filter(
+                Course.course_id == course_id,
+                Course.user_id == user_id,
+            )
             .first()
         )
 
@@ -205,11 +208,15 @@ def get_course_by_id(course_id):
         db.close()
 
 
-def get_all_courses():
+def get_all_courses(user_id):
     db = SessionLocal()
 
     try:
-        courses = db.query(Course).all()
+        courses = (
+            db.query(Course)
+            .filter(Course.user_id == user_id)
+            .all()
+        )
 
         return [
             {

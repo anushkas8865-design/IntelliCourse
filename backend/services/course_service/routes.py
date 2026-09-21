@@ -47,17 +47,30 @@ def generate_course():
 
 
 @course_routes.route("/api/course/<course_id>", methods=["GET"])
+@jwt_required()
 def get_course(course_id):
-    result = get_course_by_id(course_id)
+    user_id = get_jwt_identity()
+
+    result = get_course_by_id(
+        course_id=course_id,
+        user_id=user_id,
+    )
 
     if result is None:
-        return jsonify({"message": "Course not found."}), 404
+        return jsonify({
+            "message": "Course not found."
+        }), 404
 
     return jsonify(result), 200
 
 
 @course_routes.route("/api/course/all", methods=["GET"])
+@jwt_required()
 def get_courses():
-    courses = get_all_courses()
+    user_id = get_jwt_identity()
 
-    return jsonify({"courses": courses}), 200
+    courses = get_all_courses(user_id=user_id)
+
+    return jsonify({
+        "courses": courses
+    }), 200

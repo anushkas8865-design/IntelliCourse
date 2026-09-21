@@ -18,6 +18,10 @@ def gateway_health():
     }), 200
 
 
+# =============================================================
+# AUTH ROUTES
+# =============================================================
+
 @gateway_routes.route("/api/auth/register", methods=["POST"])
 def register():
     data = request.get_json(silent=True)
@@ -97,6 +101,11 @@ def update_profile():
 
     return jsonify(result), status_code
 
+
+# =============================================================
+# COURSE ROUTES
+# =============================================================
+
 @gateway_routes.route("/api/course/generate", methods=["POST"])
 def generate_course():
     data = request.get_json(silent=True)
@@ -125,9 +134,17 @@ def generate_course():
 
 @gateway_routes.route("/api/course/<course_id>", methods=["GET"])
 def get_course(course_id):
+    authorization = request.headers.get("Authorization")
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
     result, status_code = forward_course_request(
         method="GET",
-        path=f"/api/course/{course_id}"
+        path=f"/api/course/{course_id}",
+        authorization=authorization
     )
 
     return jsonify(result), status_code
@@ -135,12 +152,25 @@ def get_course(course_id):
 
 @gateway_routes.route("/api/course/all", methods=["GET"])
 def get_all_courses():
+    authorization = request.headers.get("Authorization")
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
     result, status_code = forward_course_request(
         method="GET",
-        path="/api/course/all"
+        path="/api/course/all",
+        authorization=authorization
     )
 
     return jsonify(result), status_code
+
+
+# =============================================================
+# LESSON ROUTES
+# =============================================================
 
 @gateway_routes.route("/api/lesson/generate", methods=["POST"])
 def generate_lesson():
@@ -173,7 +203,9 @@ def get_lesson(lesson_id):
     authorization = request.headers.get("Authorization")
 
     if not authorization:
-        return jsonify({"message": "Authorization header is required."}), 401
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
 
     result, status_code = forward_lesson_request(
         method="GET",
@@ -189,7 +221,9 @@ def get_lesson_videos(lesson_id):
     authorization = request.headers.get("Authorization")
 
     if not authorization:
-        return jsonify({"message": "Authorization header is required."}), 401
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
 
     result, status_code = forward_lesson_request(
         method="GET",
@@ -199,22 +233,75 @@ def get_lesson_videos(lesson_id):
 
     return jsonify(result), status_code
 
+
+@gateway_routes.route("/api/challenge/generate", methods=["POST"])
+def generate_coding_challenge():
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    authorization = request.headers.get("Authorization")
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
+    result, status_code = forward_lesson_request(
+        method="POST",
+        path="/api/challenge/generate",
+        data=data,
+        authorization=authorization
+    )
+
+    return jsonify(result), status_code
+
+
+# =============================================================
+# PROGRESS ROUTES
+# =============================================================
+
 @gateway_routes.route("/api/progress/update", methods=["POST"])
 def update_progress():
     data = request.get_json(silent=True)
 
     if not data:
-        return jsonify({"message": "Request body is required."}), 400
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
 
     authorization = request.headers.get("Authorization")
 
     if not authorization:
-        return jsonify({"message": "Authorization header is required."}), 401
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
 
     result, status_code = forward_progress_request(
         method="POST",
         path="/api/progress/update",
         data=data,
+        authorization=authorization
+    )
+
+    return jsonify(result), status_code
+
+
+@gateway_routes.route("/api/progress/<user_id>", methods=["GET"])
+def get_user_progress(user_id):
+    authorization = request.headers.get("Authorization")
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
+    result, status_code = forward_progress_request(
+        method="GET",
+        path=f"/api/progress/{user_id}",
         authorization=authorization
     )
 
