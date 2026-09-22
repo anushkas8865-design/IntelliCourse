@@ -5,6 +5,7 @@ from services.ai_service.service import (
     generate_lesson_with_ai,
     generate_quiz_with_ai,
     generate_coding_challenge_with_ai,
+    generate_knowledge_graph_with_ai,
 )
 
 
@@ -101,6 +102,7 @@ def generate_quiz():
     lesson_id = data.get("lesson_id")
     lesson_title = data.get("lesson_title")
     number_of_questions = data.get("number_of_questions")
+    concepts = data.get("concepts")
 
     if not lesson_id:
         return jsonify({
@@ -127,15 +129,22 @@ def generate_quiz():
             "message": "Number of questions must be greater than zero."
         }), 400
 
+    if not isinstance(concepts, list) or not concepts:
+        return jsonify({
+            "message": "Concepts must be a non-empty list."
+        }), 400
+
     result = generate_quiz_with_ai(
         lesson_id=lesson_id,
         lesson_title=lesson_title,
         number_of_questions=number_of_questions,
+        concepts=concepts,
     )
 
     status_code = result.pop("status_code", 200)
 
     return jsonify(result), status_code
+
 
 @ai_routes.route("/api/ai/challenge", methods=["POST"])
 def generate_challenge():
@@ -169,6 +178,45 @@ def generate_challenge():
         course_title=course_title,
         lesson_title=lesson_title,
         difficulty=difficulty,
+    )
+
+    status_code = result.pop("status_code", 200)
+
+    return jsonify(result), status_code
+
+
+@ai_routes.route("/api/ai/knowledge-graph", methods=["POST"])
+def generate_knowledge_graph():
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    course_title = data.get("course_title")
+    course_description = data.get("course_description")
+    lessons = data.get("lessons")
+
+    if not course_title:
+        return jsonify({
+            "message": "Course title is required."
+        }), 400
+
+    if not course_description:
+        return jsonify({
+            "message": "Course description is required."
+        }), 400
+
+    if not isinstance(lessons, list) or not lessons:
+        return jsonify({
+            "message": "Lessons must be a non-empty list."
+        }), 400
+
+    result = generate_knowledge_graph_with_ai(
+        course_title=course_title,
+        course_description=course_description,
+        lessons=lessons,
     )
 
     status_code = result.pop("status_code", 200)

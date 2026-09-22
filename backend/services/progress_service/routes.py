@@ -26,6 +26,7 @@ def update_user_progress():
     course_id = data.get("course_id")
     completed_lessons = data.get("completed_lessons")
     quiz_score = data.get("quiz_score")
+    concept_performance = data.get("concept_performance")
 
     if not course_id:
         return jsonify({
@@ -42,13 +43,20 @@ def update_user_progress():
             "message": "Quiz score is required."
         }), 400
 
+    if concept_performance is not None:
+        if not isinstance(concept_performance, list):
+            return jsonify({
+                "message": "Concept performance must be a list."
+            }), 400
+
     user_id = get_jwt_identity()
 
     result = update_progress(
         user_id=user_id,
         course_id=course_id,
         completed_lessons=completed_lessons,
-        quiz_score=quiz_score
+        quiz_score=quiz_score,
+        concept_performance=concept_performance
     )
 
     status_code = result.pop("status_code", 200)

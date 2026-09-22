@@ -4,12 +4,17 @@ from shared.models.course import Course
 from shared.models.lesson import Lesson
 from shared.models.user_progress import UserProgress
 
+from services.progress_service.ldt_service import (
+    update_learner_digital_twin
+)
+
 
 def update_progress(
     user_id,
     course_id,
     completed_lessons,
-    quiz_score
+    quiz_score,
+    concept_performance=None
 ):
     db = SessionLocal()
 
@@ -136,6 +141,15 @@ def update_progress(
         db.commit()
         db.refresh(progress)
 
+        # ---------------------------------------------------------
+        # Update Learner Digital Twin
+        # ---------------------------------------------------------
+
+        ldt_result = update_learner_digital_twin(
+            user_id=user_id,
+            concept_performance=concept_performance
+        )
+
         return {
             "message": "Progress updated successfully.",
             "progress_id": progress.progress_id,
@@ -145,6 +159,15 @@ def update_progress(
             "total_lessons": total_lessons,
             "quiz_score": progress.quiz_score,
             "progress_percentage": progress.progress_percentage,
+            "ldt": {
+                "message": ldt_result.get("message"),
+                "difficulty_level": ldt_result.get(
+                    "difficulty_level"
+                ),
+                "quiz_accuracy": ldt_result.get(
+                    "quiz_accuracy"
+                ),
+            },
             "status_code": 200
         }
 

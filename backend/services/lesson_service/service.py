@@ -11,7 +11,7 @@ from shared.models.course import Course
 from shared.models.lesson import Lesson
 from shared.models.lesson_video import LessonVideo
 from shared.models.quiz import Quiz
-from shared.models.quiz import Quiz
+from shared.models.knowledge_node import KnowledgeNode
 from shared.models.coding_challenge import CodingChallenge
 
 load_dotenv()
@@ -364,10 +364,36 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
                 "status_code": 404
             }
 
+        knowledge_nodes = (
+            db.query(KnowledgeNode)
+            .filter(
+                KnowledgeNode.lesson_id == lesson.lesson_id
+            )
+            .all()
+        )
+
+        if not knowledge_nodes:
+            return {
+                "message": (
+                    "No knowledge concepts found for this lesson."
+                ),
+                "status_code": 400
+            }
+
+        concepts = [
+            {
+                "node_id": node.node_id,
+                "concept_name": node.concept_name,
+                "description": node.description
+            }
+            for node in knowledge_nodes
+        ]
+
         ai_result = call_quiz_ai_service(
             lesson_id=lesson.lesson_id,
             lesson_title=lesson.title,
-            number_of_questions=number_of_questions
+            number_of_questions=number_of_questions,
+            concepts=concepts
         )
 
         if "status_code" in ai_result and ai_result["status_code"] != 200:
@@ -381,11 +407,43 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
                 "status_code": 502
             }
 
+        concept_node_map = {
+            node.concept_name.strip().lower(): node
+            for node in knowledge_nodes
+        }
+
         saved_quizzes = []
 
         for question_data in questions:
+            concept_name = question_data.get("concept_name")
+
+            if not isinstance(concept_name, str):
+                db.rollback()
+
+                return {
+                    "message": (
+                        "AI quiz question is missing a valid concept."
+                    ),
+                    "status_code": 502
+                }
+
+            knowledge_node = concept_node_map.get(
+                concept_name.strip().lower()
+            )
+
+            if knowledge_node is None:
+                db.rollback()
+
+                return {
+                    "message": (
+                        "AI quiz question references an unknown concept."
+                    ),
+                    "status_code": 502
+                }
+
             quiz = Quiz(
                 lesson_id=lesson.lesson_id,
+                knowledge_node_id=knowledge_node.node_id,
                 question=question_data["question"],
                 option_a=question_data["option_a"],
                 option_b=question_data["option_b"],
@@ -414,7 +472,8 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
                     "option_c": quiz.option_c,
                     "option_d": quiz.option_d,
                     "correct_answer": quiz.correct_answer,
-                    "explanation": quiz.explanation
+                    "explanation": quiz.explanation,
+                    "knowledge_node_id": quiz.knowledge_node_id
                 }
                 for quiz in saved_quizzes
             ],
@@ -433,6 +492,233 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
     finally:
         db.close()
 
+
+# ---------------------------------------------------------
+# QUIZ ANSWER EVALUATION
+# ---------------------------------------------------------
+
+def evaluate_quiz(user_id, lesson_id, answers):
+    db = SessionLocal()
+
+    try:
+        lesson = (
+            db.query(Lesson)
+            .join(
+                Course,
+                Lesson.course_id == Course.course_id
+            )
+            .filter(
+                Lesson.lesson_id == lesson_id,
+                Course.user_id == user_id
+            )
+            .first()
+        )
+
+        if lesson is None:
+            return {
+                "message": "Lesson not found.",
+                "status_code": 404
+            }
+
+        if not isinstance(answers, list) or not answers:
+            return {
+                "message": "Quiz answers are required.",
+                "status_code": 400
+            }
+
+        quiz_ids = []
+
+        for answer_data in answers:
+            if not isinstance(answer_data, dict):
+                return {
+                    "message": "Invalid quiz answer format.",
+                    "status_code": 400
+                }
+
+            quiz_id = answer_data.get("quiz_id")
+            selected_answer = answer_data.get("answer")
+
+            if not quiz_id or not selected_answer:
+                return {
+                    "message": (
+                        "Each answer must contain quiz_id and answer."
+                    ),
+                    "status_code": 400
+                }
+
+            if not isinstance(selected_answer, str):
+                return {
+                    "message": "Quiz answer must be a string.",
+                    "status_code": 400
+                }
+
+            selected_answer = selected_answer.strip().upper()
+
+            if selected_answer not in {"A", "B", "C", "D"}:
+                return {
+                    "message": (
+                        "Quiz answer must be A, B, C, or D."
+                    ),
+                    "status_code": 400
+                }
+
+            quiz_ids.append(quiz_id)
+
+        quizzes = (
+            db.query(Quiz)
+            .filter(
+                Quiz.lesson_id == lesson_id,
+                Quiz.quiz_id.in_(quiz_ids)
+            )
+            .all()
+        )
+
+        quiz_map = {
+            quiz.quiz_id: quiz
+            for quiz in quizzes
+        }
+
+        if len(quiz_map) != len(set(quiz_ids)):
+            return {
+                "message": (
+                    "One or more quiz questions do not belong "
+                    "to this lesson."
+                ),
+                "status_code": 400
+            }
+
+        knowledge_node_ids = {
+            quiz.knowledge_node_id
+            for quiz in quizzes
+        }
+
+        if None in knowledge_node_ids:
+            return {
+                "message": (
+                    "One or more quiz questions are not linked "
+                    "to a knowledge concept."
+                ),
+                "status_code": 500
+            }
+
+        knowledge_nodes = (
+            db.query(KnowledgeNode)
+            .filter(
+                KnowledgeNode.node_id.in_(knowledge_node_ids)
+            )
+            .all()
+        )
+
+        knowledge_node_map = {
+            node.node_id: node
+            for node in knowledge_nodes
+        }
+
+        results = []
+
+        concept_performance = {}
+
+        for answer_data in answers:
+            quiz_id = answer_data["quiz_id"]
+            selected_answer = (
+                answer_data["answer"]
+                .strip()
+                .upper()
+            )
+
+            quiz = quiz_map[quiz_id]
+
+            correct = (
+                selected_answer == quiz.correct_answer.upper()
+            )
+
+            knowledge_node = knowledge_node_map.get(
+                quiz.knowledge_node_id
+            )
+
+            if knowledge_node is None:
+                return {
+                    "message": (
+                        "Knowledge concept for quiz question "
+                        "was not found."
+                    ),
+                    "status_code": 500
+                }
+
+            node_id = knowledge_node.node_id
+
+            if node_id not in concept_performance:
+                concept_performance[node_id] = {
+                    "knowledge_node_id": node_id,
+                    "concept_name": knowledge_node.concept_name,
+                    "total_questions": 0,
+                    "correct_answers": 0,
+                    "incorrect_answers": 0
+                }
+
+            concept_performance[node_id]["total_questions"] += 1
+
+            if correct:
+                concept_performance[node_id]["correct_answers"] += 1
+            else:
+                concept_performance[node_id]["incorrect_answers"] += 1
+
+            results.append(
+                {
+                    "quiz_id": quiz.quiz_id,
+                    "knowledge_node_id": node_id,
+                    "concept_name": knowledge_node.concept_name,
+                    "selected_answer": selected_answer,
+                    "correct": correct,
+                    "correct_answer": quiz.correct_answer,
+                    "explanation": quiz.explanation
+                }
+            )
+
+        total_questions = len(results)
+
+        correct_answers = sum(
+            1
+            for result in results
+            if result["correct"]
+        )
+
+        score = (
+            (correct_answers / total_questions) * 100
+            if total_questions > 0
+            else 0
+        )
+
+        for performance in concept_performance.values():
+            performance["accuracy"] = (
+                performance["correct_answers"]
+                / performance["total_questions"]
+            ) * 100
+
+        return {
+            "message": "Quiz evaluated successfully.",
+            "lesson_id": lesson.lesson_id,
+            "lesson_title": lesson.title,
+            "total_questions": total_questions,
+            "correct_answers": correct_answers,
+            "incorrect_answers": total_questions - correct_answers,
+            "score": round(score, 2),
+            "results": results,
+            "concept_performance": list(
+                concept_performance.values()
+            ),
+            "status_code": 200
+        }
+
+    except Exception as error:
+        return {
+            "message": "Quiz evaluation failed.",
+            "error": str(error),
+            "status_code": 500
+        }
+
+    finally:
+        db.close()
 
 # ---------------------------------------------------------
 # CODING CHALLENGE GENERATION
@@ -593,13 +879,15 @@ def call_coding_challenge_ai_service(
 def call_quiz_ai_service(
     lesson_id,
     lesson_title,
-    number_of_questions
+    number_of_questions,
+    concepts
 ):
     payload = json.dumps(
         {
             "lesson_id": lesson_id,
             "lesson_title": lesson_title,
-            "number_of_questions": number_of_questions
+            "number_of_questions": number_of_questions,
+            "concepts": concepts
         }
     ).encode("utf-8")
 

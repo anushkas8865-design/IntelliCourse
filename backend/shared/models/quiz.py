@@ -21,6 +21,12 @@ class Quiz(Base):
         nullable=False,
     )
 
+    knowledge_node_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("knowledge_nodes.node_id"),
+        nullable=False,
+    )
+
     question: Mapped[str] = mapped_column(
         Text,
         nullable=False,

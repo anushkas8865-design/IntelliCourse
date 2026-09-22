@@ -422,7 +422,22 @@ def validate_lesson_response(lesson_data, sequence_number):
 # QUIZ GENERATION
 # ---------------------------------------------------------
 
-def build_quiz_prompt(lesson_id, lesson_title, number_of_questions):
+def build_quiz_prompt(
+    lesson_id,
+    lesson_title,
+    number_of_questions,
+    concepts,
+):
+    concept_information = []
+
+    for concept in concepts:
+        concept_information.append(
+            {
+                "concept_name": concept["concept_name"],
+                "description": concept["description"],
+            }
+        )
+
     return f"""
 You are an AI quiz-generation assistant.
 
@@ -431,6 +446,9 @@ Generate multiple-choice quiz questions for an educational lesson.
 Lesson ID: {lesson_id}
 Lesson Title: {lesson_title}
 Number of Questions: {number_of_questions}
+
+Concepts taught in this lesson:
+{json.dumps(concept_information, indent=2)}
 
 Return ONLY valid JSON.
 
@@ -445,7 +463,8 @@ The JSON must contain exactly these top-level fields:
             "option_c": "string",
             "option_d": "string",
             "correct_answer": "A",
-            "explanation": "string"
+            "explanation": "string",
+            "concept_name": "string"
         }}
     ]
 }}
@@ -453,23 +472,33 @@ The JSON must contain exactly these top-level fields:
 Requirements:
 
 1. Generate exactly {number_of_questions} questions.
-2. Every question must be directly related to the lesson title.
-3. Questions must test understanding of the lesson rather than unrelated knowledge.
-4. Each question must have exactly four options.
-5. The options must be labeled conceptually as A, B, C, and D through the JSON fields.
-6. The correct_answer must contain only one of: A, B, C, or D.
-7. The correct answer must actually match one of the four options.
-8. Provide a clear explanation for why the correct answer is correct.
-9. Avoid ambiguous questions.
-10. Avoid duplicate questions.
-11. Use a difficulty appropriate for an educational learner.
-12. Do not include markdown or code fences.
-13. Do not include fields outside the requested JSON structure.
-14. Do not calculate or invent unrelated information.
+2. Every question must be directly related to the lesson.
+3. Every question must test one of the provided concepts.
+4. Each question must be associated with exactly one concept.
+5. The concept_name must exactly match one of the provided concept names.
+6. Multiple questions may test the same concept.
+7. Questions should cover the provided concepts appropriately.
+8. Questions must test understanding rather than unrelated knowledge.
+9. Each question must have exactly four options.
+10. The options must be represented using option_a, option_b, option_c, and option_d.
+11. The correct_answer must contain only one of: A, B, C, or D.
+12. The correct answer must actually match one of the four options.
+13. Provide a clear explanation for why the correct answer is correct.
+14. Avoid ambiguous questions.
+15. Avoid duplicate questions.
+16. Use a difficulty appropriate for an educational learner.
+17. Do not include markdown or code fences.
+18. Do not include fields outside the requested JSON structure.
+19. Do not calculate or invent unrelated information.
 """
 
 
-def generate_quiz_with_ai(lesson_id, lesson_title, number_of_questions):
+def generate_quiz_with_ai(
+    lesson_id,
+    lesson_title,
+    number_of_questions,
+    concepts,
+):
     ai_mode = os.getenv("AI_MODE", "development").lower()
 
     if ai_mode == "development":
@@ -477,6 +506,7 @@ def generate_quiz_with_ai(lesson_id, lesson_title, number_of_questions):
             lesson_id=lesson_id,
             lesson_title=lesson_title,
             number_of_questions=number_of_questions,
+            concepts=concepts,
         )
 
     if ai_mode != "gemini":
@@ -489,6 +519,7 @@ def generate_quiz_with_ai(lesson_id, lesson_title, number_of_questions):
         lesson_id=lesson_id,
         lesson_title=lesson_title,
         number_of_questions=number_of_questions,
+        concepts=concepts,
     )
 
 
@@ -496,18 +527,32 @@ def generate_development_quiz(
     lesson_id,
     lesson_title,
     number_of_questions,
+    concepts,
 ):
+    if not concepts:
+        return {
+            "message": "No concepts found for this lesson.",
+            "status_code": 400,
+        }
+
     questions = []
 
-    for question_number in range(1, number_of_questions + 1):
+    for question_number in range(number_of_questions):
+        concept = concepts[
+            question_number % len(concepts)
+        ]
+
+        concept_name = concept["concept_name"]
+
         questions.append(
             {
                 "question": (
                     f"Which statement best describes "
-                    f"{lesson_title}?"
+                    f"{concept_name}?"
                 ),
                 "option_a": (
-                    f"It is a concept related to {lesson_title}."
+                    f"It is a concept related to "
+                    f"{concept_name}."
                 ),
                 "option_b": (
                     "It is completely unrelated to the lesson."
@@ -520,12 +565,27 @@ def generate_development_quiz(
                 ),
                 "correct_answer": "A",
                 "explanation": (
-                    f"The correct answer is A because the question "
-                    f"is directly related to the lesson topic "
-                    f"{lesson_title}."
+                    f"The correct answer is A because "
+                    f"{concept_name} is a concept taught "
+                    f"in this lesson."
                 ),
+                "concept_name": concept_name,
             }
         )
+
+    validation_error = validate_quiz_response(
+        {
+            "questions": questions
+        },
+        number_of_questions,
+        concepts,
+    )
+
+    if validation_error:
+        return {
+            "message": validation_error,
+            "status_code": 502,
+        }
 
     return {
         "questions": questions
@@ -536,6 +596,7 @@ def generate_gemini_quiz(
     lesson_id,
     lesson_title,
     number_of_questions,
+    concepts,
 ):
     api_key = os.getenv("GEMINI_API_KEY")
 
@@ -552,6 +613,7 @@ def generate_gemini_quiz(
             lesson_id=lesson_id,
             lesson_title=lesson_title,
             number_of_questions=number_of_questions,
+            concepts=concepts,
         )
 
         response = client.models.generate_content(
@@ -570,6 +632,7 @@ def generate_gemini_quiz(
         validation_error = validate_quiz_response(
             quiz_data,
             number_of_questions,
+            concepts,
         )
 
         if validation_error:
@@ -594,7 +657,11 @@ def generate_gemini_quiz(
         }
 
 
-def validate_quiz_response(quiz_data, number_of_questions):
+def validate_quiz_response(
+    quiz_data,
+    number_of_questions,
+    concepts,
+):
     if not isinstance(quiz_data, dict):
         return "AI quiz response must be a JSON object."
 
@@ -612,6 +679,16 @@ def validate_quiz_response(quiz_data, number_of_questions):
             f"{number_of_questions} questions."
         )
 
+    if not isinstance(concepts, list) or not concepts:
+        return "Quiz concepts must be a non-empty list."
+
+    valid_concepts = {
+        concept["concept_name"].strip().lower()
+        for concept in concepts
+        if isinstance(concept, dict)
+        and isinstance(concept.get("concept_name"), str)
+    }
+
     required_fields = [
         "question",
         "option_a",
@@ -620,6 +697,7 @@ def validate_quiz_response(quiz_data, number_of_questions):
         "option_d",
         "correct_answer",
         "explanation",
+        "concept_name",
     ]
 
     valid_answers = {"A", "B", "C", "D"}
@@ -642,6 +720,7 @@ def validate_quiz_response(quiz_data, number_of_questions):
             "option_d",
             "correct_answer",
             "explanation",
+            "concept_name",
         ]:
             if not isinstance(question[field], str):
                 return f"{field} must be a string."
@@ -649,6 +728,16 @@ def validate_quiz_response(quiz_data, number_of_questions):
         if question["correct_answer"] not in valid_answers:
             return (
                 "correct_answer must be one of: A, B, C, or D."
+            )
+
+        normalized_concept_name = (
+            question["concept_name"].strip().lower()
+        )
+
+        if normalized_concept_name not in valid_concepts:
+            return (
+                "Quiz question references a concept "
+                "that does not belong to the lesson."
             )
 
     return None
@@ -818,5 +907,384 @@ def validate_coding_challenge_response(challenge_data):
     for field in required_fields:
         if not isinstance(challenge_data[field], str):
             return f"{field} must be a string."
+
+    return None
+
+# ============================================================
+# AKDG - Adaptive Knowledge Dependency Graph
+# ============================================================
+
+ALLOWED_KNOWLEDGE_RELATIONSHIPS = {
+    "prerequisite",
+    "builds_on",
+    "related_to",
+}
+
+
+def build_knowledge_graph_prompt(
+    course_title,
+    course_description,
+    lessons,
+):
+    lesson_information = []
+
+    for lesson in lessons:
+        lesson_information.append(
+            {
+                "sequence_number": lesson["sequence_number"],
+                "title": lesson["title"],
+                "content": lesson["content"],
+                "summary": lesson["summary"],
+            }
+        )
+
+    return f"""
+You are generating a Knowledge Dependency Graph for a single course.
+
+Course title:
+{course_title}
+
+Course description:
+{course_description}
+
+Lessons:
+{json.dumps(lesson_information, indent=2)}
+
+Your task is to identify the meaningful concepts taught in this course
+and the relationships between those concepts.
+
+Return ONLY valid JSON.
+
+The JSON must have exactly this structure:
+
+{{
+  "nodes": [
+    {{
+      "concept_name": "string",
+      "description": "string",
+      "lesson_sequence_number": 1
+    }}
+  ],
+  "relationships": [
+    {{
+      "source_concept": "string",
+      "target_concept": "string",
+      "relationship_type": "prerequisite"
+    }}
+  ]
+}}
+
+Rules:
+
+1. Each node represents a meaningful concept taught in the course.
+2. A lesson may contain multiple concepts.
+3. Every node must reference the lesson where that concept is taught
+   using lesson_sequence_number.
+4. lesson_sequence_number must exactly match one of the provided lesson
+   sequence numbers.
+5. Do not create concepts that are unrelated to the provided course content.
+6. Do not create database IDs.
+7. relationship_type must be exactly one of:
+   - prerequisite
+   - builds_on
+   - related_to
+8. "prerequisite" means the source concept is required before the target
+   concept can be properly understood.
+9. "builds_on" means the target concept extends or develops the source
+   concept.
+10. "related_to" means the concepts are connected but neither is
+    necessarily a prerequisite of the other.
+11. Do not create self-relationships.
+12. Do not assume that lesson order automatically means dependency.
+13. Create relationships only when the course content supports them.
+14. Do not add explanations outside the JSON.
+15. Do not use Markdown code fences.
+"""
+
+
+def generate_knowledge_graph_with_ai(
+    course_title,
+    course_description,
+    lessons,
+):
+    mode = os.getenv("AI_MODE", "development").lower()
+
+    if mode == "gemini":
+        return generate_gemini_knowledge_graph(
+            course_title=course_title,
+            course_description=course_description,
+            lessons=lessons,
+        )
+
+    return generate_development_knowledge_graph(
+        course_title=course_title,
+        course_description=course_description,
+        lessons=lessons,
+    )
+
+
+def generate_development_knowledge_graph(
+    course_title,
+    course_description,
+    lessons,
+):
+    nodes = []
+
+    for lesson in lessons:
+        nodes.append(
+            {
+                "concept_name": lesson["title"],
+                "description": lesson["summary"],
+                "lesson_sequence_number": lesson["sequence_number"],
+            }
+        )
+
+    relationships = []
+
+    for index in range(1, len(nodes)):
+        previous_node = nodes[index - 1]
+        current_node = nodes[index]
+
+        relationships.append(
+            {
+                "source_concept": previous_node["concept_name"],
+                "target_concept": current_node["concept_name"],
+                "relationship_type": "builds_on",
+            }
+        )
+
+    result = {
+        "nodes": nodes,
+        "relationships": relationships,
+    }
+
+    validation_result = validate_knowledge_graph_response(
+        result=result,
+        lessons=lessons,
+    )
+
+    if validation_result is not None:
+        return validation_result
+
+    return result
+
+
+def generate_gemini_knowledge_graph(
+    course_title,
+    course_description,
+    lessons,
+):
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+        return {
+            "message": "GEMINI_API_KEY is not configured.",
+            "status_code": 500,
+        }
+
+    prompt = build_knowledge_graph_prompt(
+        course_title=course_title,
+        course_description=course_description,
+        lessons=lessons,
+    )
+
+    try:
+        client = genai.Client(api_key=api_key)
+
+        response = client.models.generate_content(
+            model="gemini-3.5-flash",
+            contents=prompt,
+        )
+
+        response_text = response.text.strip()
+
+        result = json.loads(response_text)
+
+        validation_result = validate_knowledge_graph_response(
+            result=result,
+            lessons=lessons,
+        )
+
+        if validation_result is not None:
+            return validation_result
+
+        return result
+
+    except json.JSONDecodeError:
+        return {
+            "message": "Gemini returned invalid JSON.",
+            "status_code": 502,
+        }
+
+    except Exception as error:
+        return {
+            "message": "Knowledge graph generation failed.",
+            "error": str(error),
+            "status_code": 500,
+        }
+
+
+def validate_knowledge_graph_response(result, lessons):
+    if not isinstance(result, dict):
+        return {
+            "message": "Knowledge graph response must be a JSON object.",
+            "status_code": 502,
+        }
+
+    nodes = result.get("nodes")
+    relationships = result.get("relationships")
+
+    if not isinstance(nodes, list):
+        return {
+            "message": "Knowledge graph nodes must be a list.",
+            "status_code": 502,
+        }
+
+    if not isinstance(relationships, list):
+        return {
+            "message": "Knowledge graph relationships must be a list.",
+            "status_code": 502,
+        }
+
+    valid_sequences = {
+        lesson["sequence_number"]
+        for lesson in lessons
+    }
+
+    concept_names = set()
+
+    for node in nodes:
+        if not isinstance(node, dict):
+            return {
+                "message": "Each knowledge graph node must be an object.",
+                "status_code": 502,
+            }
+
+        required_fields = {
+            "concept_name",
+            "description",
+            "lesson_sequence_number",
+        }
+
+        if not required_fields.issubset(node.keys()):
+            return {
+                "message": "Knowledge graph node is missing required fields.",
+                "status_code": 502,
+            }
+
+        concept_name = node["concept_name"]
+        description = node["description"]
+        sequence_number = node["lesson_sequence_number"]
+
+        if not isinstance(concept_name, str) or not concept_name.strip():
+            return {
+                "message": "Knowledge graph concept name must be a non-empty string.",
+                "status_code": 502,
+            }
+
+        if not isinstance(description, str):
+            return {
+                "message": "Knowledge graph concept description must be a string.",
+                "status_code": 502,
+            }
+
+        if not isinstance(sequence_number, int):
+            return {
+                "message": "Knowledge graph lesson sequence number must be an integer.",
+                "status_code": 502,
+            }
+
+        if sequence_number not in valid_sequences:
+            return {
+                "message": (
+                    "Knowledge graph contains an invalid "
+                    "lesson sequence number."
+                ),
+                "status_code": 502,
+            }
+
+        normalized_concept_name = concept_name.strip().lower()
+
+        if normalized_concept_name in concept_names:
+            return {
+                "message": "Knowledge graph contains duplicate concepts.",
+                "status_code": 502,
+            }
+
+        concept_names.add(normalized_concept_name)
+
+    for relationship in relationships:
+        if not isinstance(relationship, dict):
+            return {
+                "message": (
+                    "Each knowledge graph relationship "
+                    "must be an object."
+                ),
+                "status_code": 502,
+            }
+
+        required_fields = {
+            "source_concept",
+            "target_concept",
+            "relationship_type",
+        }
+
+        if not required_fields.issubset(relationship.keys()):
+            return {
+                "message": (
+                    "Knowledge graph relationship is "
+                    "missing required fields."
+                ),
+                "status_code": 502,
+            }
+
+        source_concept = relationship["source_concept"]
+        target_concept = relationship["target_concept"]
+        relationship_type = relationship["relationship_type"]
+
+        if not isinstance(source_concept, str) or not source_concept.strip():
+            return {
+                "message": "Source concept must be a non-empty string.",
+                "status_code": 502,
+            }
+
+        if not isinstance(target_concept, str) or not target_concept.strip():
+            return {
+                "message": "Target concept must be a non-empty string.",
+                "status_code": 502,
+            }
+
+        if source_concept.strip().lower() == target_concept.strip().lower():
+            return {
+                "message": "Knowledge graph cannot contain self-relationships.",
+                "status_code": 502,
+            }
+
+        if relationship_type not in ALLOWED_KNOWLEDGE_RELATIONSHIPS:
+            return {
+                "message": (
+                    "Knowledge graph contains an invalid "
+                    "relationship type."
+                ),
+                "status_code": 502,
+            }
+
+        if source_concept.strip().lower() not in concept_names:
+            return {
+                "message": (
+                    "Knowledge graph relationship references "
+                    "an unknown source concept."
+                ),
+                "status_code": 502,
+            }
+
+        if target_concept.strip().lower() not in concept_names:
+            return {
+                "message": (
+                    "Knowledge graph relationship references "
+                    "an unknown target concept."
+                ),
+                "status_code": 502,
+            }
 
     return None

@@ -8,6 +8,8 @@ from shared.models.user import User
 from shared.models.course import Course
 from shared.models.lesson import Lesson
 
+from services.course_service.akdg_service import generate_and_save_knowledge_graph
+
 
 AI_SERVICE_URL = "http://127.0.0.1:5003/api/ai/course"
 
@@ -61,6 +63,10 @@ def create_course(user_id, topic, difficulty, duration):
 
         db.commit()
 
+        akdg_result = generate_and_save_knowledge_graph(
+            course_id=course.course_id
+        )
+
         return {
             "message": "Course generated and saved successfully.",
             "course_id": course.course_id,
@@ -80,6 +86,14 @@ def create_course(user_id, topic, difficulty, duration):
                 }
                 for lesson in lessons
             ],
+            "akdg": {
+                "message": akdg_result.get("message"),
+                "node_count": akdg_result.get("node_count", 0),
+                "relationship_count": akdg_result.get(
+                    "relationship_count",
+                    0,
+                ),
+            },
             "status_code": 201,
         }
 

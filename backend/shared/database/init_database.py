@@ -9,6 +9,8 @@ from shared.models.coding_challenge import CodingChallenge
 from shared.models.user_progress import UserProgress
 from shared.models.ai_chat_history import AIChatHistory
 from shared.models.learner_digital_twin import LearnerDigitalTwin
+from shared.models.knowledge_node import KnowledgeNode
+from shared.models.knowledge_relationship import KnowledgeRelationship
 
 
 def initialize_database():
