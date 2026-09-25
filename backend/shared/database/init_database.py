@@ -11,6 +11,8 @@ from shared.models.ai_chat_history import AIChatHistory
 from shared.models.learner_digital_twin import LearnerDigitalTwin
 from shared.models.knowledge_node import KnowledgeNode
 from shared.models.knowledge_relationship import KnowledgeRelationship
+from shared.models.concept_learning_history import ConceptLearningHistory
+from shared.models.concept_retention_state import ConceptRetentionState
 
 
 def initialize_database():

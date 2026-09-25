@@ -444,6 +444,7 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
             quiz = Quiz(
                 lesson_id=lesson.lesson_id,
                 knowledge_node_id=knowledge_node.node_id,
+                quiz_type="normal",
                 question=question_data["question"],
                 option_a=question_data["option_a"],
                 option_b=question_data["option_b"],

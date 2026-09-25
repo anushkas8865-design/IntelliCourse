@@ -261,6 +261,35 @@ def generate_coding_challenge():
 
 
 # =============================================================
+# GENERATE QUIZ ROUTE
+# =============================================================
+
+@gateway_routes.route("/api/quiz/generate", methods=["POST"])
+def generate_quiz():
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    authorization = request.headers.get("Authorization")
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
+    result, status_code = forward_lesson_request(
+        method="POST",
+        path="/api/quiz/generate",
+        data=data,
+        authorization=authorization
+    )
+
+    return jsonify(result), status_code
+
+# =============================================================
 # EVALUATE QUIZ ROUTE
 # =============================================================
 

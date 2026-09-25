@@ -8,6 +8,10 @@ from services.progress_service.ldt_service import (
     update_learner_digital_twin
 )
 
+from services.progress_service.amre_service import (
+    record_learning_history
+)
+
 
 def update_progress(
     user_id,
@@ -46,6 +50,13 @@ def update_progress(
                 "message": "Quiz score must be between 0 and 100.",
                 "status_code": 400
             }
+
+        if concept_performance is not None:
+            if not isinstance(concept_performance, list):
+                return {
+                    "message": "Concept performance must be a list.",
+                    "status_code": 400
+                }
 
         # ---------------------------------------------------------
         # Verify that the course belongs to the logged-in user
@@ -150,6 +161,24 @@ def update_progress(
             concept_performance=concept_performance
         )
 
+        # ---------------------------------------------------------
+        # Update Adaptive Memory & Retention Engine
+        # ---------------------------------------------------------
+
+        amre_result = None
+
+        if concept_performance:
+            amre_result = record_learning_history(
+                user_id=user_id,
+                course_id=course_id,
+                concept_performance=concept_performance,
+                event_type="normal"
+            )
+
+        # ---------------------------------------------------------
+        # Return updated progress
+        # ---------------------------------------------------------
+
         return {
             "message": "Progress updated successfully.",
             "progress_id": progress.progress_id,
@@ -168,6 +197,7 @@ def update_progress(
                     "quiz_accuracy"
                 ),
             },
+            "amre": amre_result,
             "status_code": 200
         }
 
