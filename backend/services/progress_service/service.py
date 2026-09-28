@@ -18,7 +18,8 @@ def update_progress(
     course_id,
     completed_lessons,
     quiz_score,
-    concept_performance=None
+    concept_performance=None,
+    event_type="normal"
 ):
     db = SessionLocal()
 
@@ -57,6 +58,16 @@ def update_progress(
                     "message": "Concept performance must be a list.",
                     "status_code": 400
                 }
+
+        # ---------------------------------------------------------
+        # Validate AMRE event type
+        # ---------------------------------------------------------
+
+        if event_type not in {"normal", "revision"}:
+            return {
+                "message": "Invalid AMRE event type.",
+                "status_code": 400
+            }
 
         # ---------------------------------------------------------
         # Verify that the course belongs to the logged-in user
@@ -172,7 +183,7 @@ def update_progress(
                 user_id=user_id,
                 course_id=course_id,
                 concept_performance=concept_performance,
-                event_type="normal"
+                event_type=event_type
             )
 
         # ---------------------------------------------------------

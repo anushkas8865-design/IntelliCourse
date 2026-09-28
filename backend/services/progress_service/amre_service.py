@@ -263,3 +263,73 @@ def calculate_next_review(stability):
         datetime.now(timezone.utc)
         + timedelta(days=stability)
     )
+
+def get_due_revision_concepts(
+    user_id
+):
+    db = SessionLocal()
+
+    try:
+        now = datetime.now(timezone.utc)
+
+        retention_states = (
+            db.query(ConceptRetentionState)
+            .filter(
+                ConceptRetentionState.user_id == user_id,
+                ConceptRetentionState.next_review_at <= now
+            )
+            .all()
+        )
+
+        if not retention_states:
+            return {
+                "message": "No concepts are currently due for revision.",
+                "concepts": [],
+                "status_code": 200
+            }
+
+        concepts = []
+
+        for retention_state in retention_states:
+            knowledge_node = (
+                db.query(KnowledgeNode)
+                .filter(
+                    KnowledgeNode.node_id
+                    == retention_state.knowledge_node_id
+                )
+                .first()
+            )
+
+            if knowledge_node is None:
+                continue
+
+            concepts.append({
+                "knowledge_node_id": knowledge_node.node_id,
+                "course_id": retention_state.course_id,
+                "concept_name": knowledge_node.concept_name,
+                "description": knowledge_node.description,
+                "stability": retention_state.stability,
+                "next_review_at": (
+                    retention_state.next_review_at.isoformat()
+                ),
+                "updated_at": (
+                    retention_state.updated_at.isoformat()
+                )
+            })
+
+        return {
+            "message": "Due revision concepts retrieved successfully.",
+            "concepts": concepts,
+            "count": len(concepts),
+            "status_code": 200
+        }
+
+    except Exception as error:
+        return {
+            "message": "Failed to retrieve revision concepts.",
+            "error": str(error),
+            "status_code": 500
+        }
+
+    finally:
+        db.close()

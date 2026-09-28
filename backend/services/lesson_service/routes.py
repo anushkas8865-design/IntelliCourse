@@ -10,6 +10,7 @@ from shared.models.user_progress import UserProgress
 from services.lesson_service.service import (
     generate_lesson,
     generate_quiz,
+    generate_revision_quiz,
     evaluate_quiz,
     generate_coding_challenge,
     get_lesson_by_id,
@@ -115,6 +116,58 @@ def create_quiz():
 
     return jsonify(result), status_code
 
+@lesson_routes.route(
+    "/api/quiz/revision/generate",
+    methods=["POST"]
+)
+@jwt_required()
+def create_revision_quiz():
+
+    print(">>> REVISION QUIZ ROUTE HIT <<<")
+
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    course_id = data.get("course_id")
+    number_of_questions = data.get(
+        "number_of_questions"
+    )
+
+    if not course_id:
+        return jsonify({
+            "message": "Course ID is required."
+        }), 400
+
+    if number_of_questions is None:
+        return jsonify({
+            "message": "Number of questions is required."
+        }), 400
+
+    if not isinstance(number_of_questions, int):
+        return jsonify({
+            "message": "Number of questions must be an integer."
+        }), 400
+
+    if number_of_questions <= 0:
+        return jsonify({
+            "message": "Number of questions must be greater than zero."
+        }), 400
+
+    user_id = get_jwt_identity()
+
+    result = generate_revision_quiz(
+        user_id=user_id,
+        course_id=course_id,
+        number_of_questions=number_of_questions
+    )
+
+    status_code = result.pop("status_code", 200)
+
+    return jsonify(result), status_code
 
 @lesson_routes.route("/api/quiz/evaluate", methods=["POST"])
 @jwt_required()

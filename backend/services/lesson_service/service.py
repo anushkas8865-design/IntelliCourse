@@ -16,11 +16,26 @@ from shared.models.coding_challenge import CodingChallenge
 
 load_dotenv()
 
-AI_SERVICE_URL = "http://127.0.0.1:5003/api/ai/lesson"
-AI_QUIZ_SERVICE_URL = "http://127.0.0.1:5003/api/ai/quiz"
-AI_CHALLENGE_SERVICE_URL = "http://127.0.0.1:5003/api/ai/challenge"
+AI_SERVICE_URL = (
+    "http://127.0.0.1:5003/api/ai/lesson"
+)
 
-YOUTUBE_API_URL = "https://www.googleapis.com/youtube/v3/search"
+AI_QUIZ_SERVICE_URL = (
+    "http://127.0.0.1:5003/api/ai/quiz"
+)
+
+AI_REVISION_QUIZ_SERVICE_URL = (
+    "http://127.0.0.1:5003/api/ai/revision-quiz"
+)
+
+AI_CHALLENGE_SERVICE_URL = (
+    "http://127.0.0.1:5003/api/ai/challenge"
+)
+
+YOUTUBE_API_URL = (
+    "https://www.googleapis.com/youtube/v3/search"
+)
+
 YOUTUBE_MAX_RESULTS = 3
 
 
@@ -65,7 +80,12 @@ def is_programming_course(course_title, course_description):
 # LESSON GENERATION
 # ---------------------------------------------------------
 
-def generate_lesson(user_id, course_id, title, sequence_number):
+def generate_lesson(
+    user_id,
+    course_id,
+    title,
+    sequence_number
+):
     db = SessionLocal()
 
     try:
@@ -90,7 +110,10 @@ def generate_lesson(user_id, course_id, title, sequence_number):
             sequence_number=sequence_number
         )
 
-        if "status_code" in ai_result and ai_result["status_code"] != 200:
+        if (
+            "status_code" in ai_result
+            and ai_result["status_code"] != 200
+        ):
             return ai_result
 
         lesson = Lesson(
@@ -104,7 +127,9 @@ def generate_lesson(user_id, course_id, title, sequence_number):
         db.add(lesson)
         db.flush()
 
-        youtube_videos = search_youtube_videos(lesson.title)
+        youtube_videos = search_youtube_videos(
+            lesson.title
+        )
 
         for video in youtube_videos:
             lesson_video = LessonVideo(
@@ -119,7 +144,9 @@ def generate_lesson(user_id, course_id, title, sequence_number):
         db.refresh(lesson)
 
         return {
-            "message": "Lesson generated and saved successfully.",
+            "message": (
+                "Lesson generated and saved successfully."
+            ),
             "lesson_id": lesson.lesson_id,
             "course_id": lesson.course_id,
             "title": lesson.title,
@@ -143,7 +170,11 @@ def generate_lesson(user_id, course_id, title, sequence_number):
         db.close()
 
 
-def call_ai_service(course_id, title, sequence_number):
+def call_ai_service(
+    course_id,
+    title,
+    sequence_number
+):
     payload = json.dumps(
         {
             "course_id": course_id,
@@ -233,15 +264,25 @@ def search_youtube_videos(lesson_title):
         videos = []
 
         for item in data.get("items", []):
-            video_id = item.get("id", {}).get("videoId")
-            snippet = item.get("snippet", {})
+            video_id = item.get(
+                "id",
+                {}
+            ).get("videoId")
+
+            snippet = item.get(
+                "snippet",
+                {}
+            )
 
             if not video_id:
                 continue
 
             videos.append(
                 {
-                    "title": snippet.get("title", ""),
+                    "title": snippet.get(
+                        "title",
+                        ""
+                    ),
                     "youtube_url": (
                         f"https://www.youtube.com/watch?v={video_id}"
                     )
@@ -250,7 +291,11 @@ def search_youtube_videos(lesson_title):
 
         return videos
 
-    except (HTTPError, URLError, json.JSONDecodeError):
+    except (
+        HTTPError,
+        URLError,
+        json.JSONDecodeError
+    ):
         return []
 
 
@@ -289,7 +334,9 @@ def get_lesson_by_id(lesson_id):
     try:
         lesson = (
             db.query(Lesson)
-            .filter(Lesson.lesson_id == lesson_id)
+            .filter(
+                Lesson.lesson_id == lesson_id
+            )
             .first()
         )
 
@@ -319,7 +366,9 @@ def get_videos_by_lesson_id(lesson_id):
     try:
         videos = (
             db.query(LessonVideo)
-            .filter(LessonVideo.lesson_id == lesson_id)
+            .filter(
+                LessonVideo.lesson_id == lesson_id
+            )
             .all()
         )
 
@@ -341,7 +390,11 @@ def get_videos_by_lesson_id(lesson_id):
 # QUIZ GENERATION
 # ---------------------------------------------------------
 
-def generate_quiz(user_id, lesson_id, number_of_questions):
+def generate_quiz(
+    user_id,
+    lesson_id,
+    number_of_questions
+):
     db = SessionLocal()
 
     try:
@@ -367,7 +420,8 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
         knowledge_nodes = (
             db.query(KnowledgeNode)
             .filter(
-                KnowledgeNode.lesson_id == lesson.lesson_id
+                KnowledgeNode.lesson_id
+                == lesson.lesson_id
             )
             .all()
         )
@@ -375,7 +429,8 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
         if not knowledge_nodes:
             return {
                 "message": (
-                    "No knowledge concepts found for this lesson."
+                    "No knowledge concepts found "
+                    "for this lesson."
                 ),
                 "status_code": 400
             }
@@ -396,14 +451,20 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
             concepts=concepts
         )
 
-        if "status_code" in ai_result and ai_result["status_code"] != 200:
+        if (
+            "status_code" in ai_result
+            and ai_result["status_code"] != 200
+        ):
             return ai_result
 
         questions = ai_result.get("questions")
 
         if not isinstance(questions, list):
             return {
-                "message": "AI Service returned invalid quiz data.",
+                "message": (
+                    "AI Service returned invalid "
+                    "quiz data."
+                ),
                 "status_code": 502
             }
 
@@ -415,14 +476,17 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
         saved_quizzes = []
 
         for question_data in questions:
-            concept_name = question_data.get("concept_name")
+            concept_name = question_data.get(
+                "concept_name"
+            )
 
             if not isinstance(concept_name, str):
                 db.rollback()
 
                 return {
                     "message": (
-                        "AI quiz question is missing a valid concept."
+                        "AI quiz question is missing "
+                        "a valid concept."
                     ),
                     "status_code": 502
                 }
@@ -436,7 +500,8 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
 
                 return {
                     "message": (
-                        "AI quiz question references an unknown concept."
+                        "AI quiz question references "
+                        "an unknown concept."
                     ),
                     "status_code": 502
                 }
@@ -460,7 +525,9 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
         db.commit()
 
         return {
-            "message": "Quiz generated and saved successfully.",
+            "message": (
+                "Quiz generated and saved successfully."
+            ),
             "lesson_id": lesson.lesson_id,
             "lesson_title": lesson.title,
             "questions": [
@@ -474,7 +541,10 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
                     "option_d": quiz.option_d,
                     "correct_answer": quiz.correct_answer,
                     "explanation": quiz.explanation,
-                    "knowledge_node_id": quiz.knowledge_node_id
+                    "knowledge_node_id": (
+                        quiz.knowledge_node_id
+                    ),
+                    "quiz_type": quiz.quiz_type
                 }
                 for quiz in saved_quizzes
             ],
@@ -495,10 +565,323 @@ def generate_quiz(user_id, lesson_id, number_of_questions):
 
 
 # ---------------------------------------------------------
+# REVISION QUIZ GENERATION
+# ---------------------------------------------------------
+
+def generate_revision_quiz(
+    user_id,
+    course_id,
+    number_of_questions
+):
+    db = SessionLocal()
+
+    try:
+        # -----------------------------------------------------
+        # Validate requested question count
+        # -----------------------------------------------------
+
+        if not isinstance(number_of_questions, int):
+            return {
+                "message": (
+                    "Number of questions must be "
+                    "an integer."
+                ),
+                "status_code": 400
+            }
+
+        if number_of_questions <= 0:
+            return {
+                "message": (
+                    "Number of questions must be "
+                    "greater than zero."
+                ),
+                "status_code": 400
+            }
+
+        # -----------------------------------------------------
+        # Verify course ownership
+        # -----------------------------------------------------
+
+        course = (
+            db.query(Course)
+            .filter(
+                Course.course_id == course_id,
+                Course.user_id == user_id
+            )
+            .first()
+        )
+
+        if course is None:
+            return {
+                "message": "Course not found.",
+                "status_code": 404
+            }
+
+        # -----------------------------------------------------
+        # Get concepts currently due for revision
+        # -----------------------------------------------------
+
+        from services.progress_service.amre_service import (
+            get_due_revision_concepts
+        )
+
+        revision_result = get_due_revision_concepts(
+            user_id=user_id
+        )
+
+        if (
+            "status_code" in revision_result
+            and revision_result["status_code"] != 200
+        ):
+            return revision_result
+
+        # -----------------------------------------------------
+        # Keep only concepts belonging to this course
+        # -----------------------------------------------------
+
+        due_concepts = [
+            concept
+            for concept in revision_result.get(
+                "concepts",
+                []
+            )
+            if concept.get("course_id") == course_id
+        ]
+
+        if not due_concepts:
+            return {
+                "message": (
+                    "No concepts are currently due "
+                    "for revision."
+                ),
+                "concepts": [],
+                "questions": [],
+                "status_code": 200
+            }
+
+        # -----------------------------------------------------
+        # Limit requested questions to available concepts
+        # -----------------------------------------------------
+
+        number_of_questions = min(
+            number_of_questions,
+            len(due_concepts)
+        )
+
+        # -----------------------------------------------------
+        # Get knowledge nodes
+        # -----------------------------------------------------
+
+        knowledge_node_ids = [
+            concept["knowledge_node_id"]
+            for concept in due_concepts
+            if concept.get("knowledge_node_id")
+        ]
+
+        knowledge_nodes = (
+            db.query(KnowledgeNode)
+            .filter(
+                KnowledgeNode.node_id.in_(
+                    knowledge_node_ids
+                ),
+                KnowledgeNode.course_id == course_id
+            )
+            .all()
+        )
+
+        if not knowledge_nodes:
+            return {
+                "message": (
+                    "No knowledge concepts found "
+                    "for revision."
+                ),
+                "status_code": 400
+            }
+
+        knowledge_node_map = {
+            node.node_id: node
+            for node in knowledge_nodes
+        }
+
+        concepts = []
+
+        for concept in due_concepts:
+            knowledge_node = knowledge_node_map.get(
+                concept["knowledge_node_id"]
+            )
+
+            if knowledge_node is None:
+                continue
+
+            concepts.append(
+                {
+                    "node_id": knowledge_node.node_id,
+                    "concept_name": (
+                        knowledge_node.concept_name
+                    ),
+                    "description": (
+                        knowledge_node.description
+                    )
+                }
+            )
+
+        if not concepts:
+            return {
+                "message": (
+                    "No valid knowledge concepts "
+                    "found for revision."
+                ),
+                "status_code": 400
+            }
+
+        # -----------------------------------------------------
+        # Generate revision questions through AI Service
+        # -----------------------------------------------------
+
+        ai_result = call_revision_quiz_ai_service(
+            course_id=course_id,
+            course_title=course.title,
+            number_of_questions=number_of_questions,
+            concepts=concepts
+        )
+
+        if (
+            "status_code" in ai_result
+            and ai_result["status_code"] != 200
+        ):
+            return ai_result
+
+        questions = ai_result.get("questions")
+
+        if not isinstance(questions, list):
+            return {
+                "message": (
+                    "AI Service returned invalid "
+                    "revision quiz data."
+                ),
+                "status_code": 502
+            }
+
+        # -----------------------------------------------------
+        # Map AI concept names to actual knowledge nodes
+        # -----------------------------------------------------
+
+        concept_node_map = {
+            node.concept_name.strip().lower(): node
+            for node in knowledge_nodes
+        }
+
+        saved_quizzes = []
+
+        # -----------------------------------------------------
+        # Save revision quizzes
+        # -----------------------------------------------------
+
+        for question_data in questions:
+            concept_name = question_data.get(
+                "concept_name"
+            )
+
+            if not isinstance(concept_name, str):
+                db.rollback()
+
+                return {
+                    "message": (
+                        "AI revision quiz question "
+                        "is missing a valid concept."
+                    ),
+                    "status_code": 502
+                }
+
+            knowledge_node = concept_node_map.get(
+                concept_name.strip().lower()
+            )
+
+            if knowledge_node is None:
+                db.rollback()
+
+                return {
+                    "message": (
+                        "AI revision quiz question "
+                        "references an unknown concept."
+                    ),
+                    "status_code": 502
+                }
+
+            quiz = Quiz(
+                lesson_id=knowledge_node.lesson_id,
+                knowledge_node_id=knowledge_node.node_id,
+                quiz_type="revision",
+                question=question_data["question"],
+                option_a=question_data["option_a"],
+                option_b=question_data["option_b"],
+                option_c=question_data["option_c"],
+                option_d=question_data["option_d"],
+                correct_answer=question_data["correct_answer"],
+                explanation=question_data["explanation"]
+            )
+
+            db.add(quiz)
+            saved_quizzes.append(quiz)
+
+        db.commit()
+
+        for quiz in saved_quizzes:
+            db.refresh(quiz)
+
+        return {
+            "message": (
+                "Revision quiz generated and "
+                "saved successfully."
+            ),
+            "course_id": course_id,
+            "course_title": course.title,
+            "quiz_type": "revision",
+            "questions": [
+                {
+                    "quiz_id": quiz.quiz_id,
+                    "lesson_id": quiz.lesson_id,
+                    "question": quiz.question,
+                    "option_a": quiz.option_a,
+                    "option_b": quiz.option_b,
+                    "option_c": quiz.option_c,
+                    "option_d": quiz.option_d,
+                    "correct_answer": quiz.correct_answer,
+                    "explanation": quiz.explanation,
+                    "knowledge_node_id": (
+                        quiz.knowledge_node_id
+                    ),
+                    "quiz_type": quiz.quiz_type
+                }
+                for quiz in saved_quizzes
+            ],
+            "status_code": 201
+        }
+
+    except Exception as error:
+        db.rollback()
+
+        return {
+            "message": (
+                "Revision quiz generation failed."
+            ),
+            "error": str(error),
+            "status_code": 500
+        }
+
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------
 # QUIZ ANSWER EVALUATION
 # ---------------------------------------------------------
 
-def evaluate_quiz(user_id, lesson_id, answers):
+def evaluate_quiz(
+    user_id,
+    lesson_id,
+    answers
+):
     db = SessionLocal()
 
     try:
@@ -542,20 +925,30 @@ def evaluate_quiz(user_id, lesson_id, answers):
             if not quiz_id or not selected_answer:
                 return {
                     "message": (
-                        "Each answer must contain quiz_id and answer."
+                        "Each answer must contain "
+                        "quiz_id and answer."
                     ),
                     "status_code": 400
                 }
 
             if not isinstance(selected_answer, str):
                 return {
-                    "message": "Quiz answer must be a string.",
+                    "message": (
+                        "Quiz answer must be a string."
+                    ),
                     "status_code": 400
                 }
 
-            selected_answer = selected_answer.strip().upper()
+            selected_answer = (
+                selected_answer.strip().upper()
+            )
 
-            if selected_answer not in {"A", "B", "C", "D"}:
+            if selected_answer not in {
+                "A",
+                "B",
+                "C",
+                "D"
+            }:
                 return {
                     "message": (
                         "Quiz answer must be A, B, C, or D."
@@ -582,8 +975,8 @@ def evaluate_quiz(user_id, lesson_id, answers):
         if len(quiz_map) != len(set(quiz_ids)):
             return {
                 "message": (
-                    "One or more quiz questions do not belong "
-                    "to this lesson."
+                    "One or more quiz questions do not "
+                    "belong to this lesson."
                 ),
                 "status_code": 400
             }
@@ -596,8 +989,8 @@ def evaluate_quiz(user_id, lesson_id, answers):
         if None in knowledge_node_ids:
             return {
                 "message": (
-                    "One or more quiz questions are not linked "
-                    "to a knowledge concept."
+                    "One or more quiz questions are not "
+                    "linked to a knowledge concept."
                 ),
                 "status_code": 500
             }
@@ -605,7 +998,9 @@ def evaluate_quiz(user_id, lesson_id, answers):
         knowledge_nodes = (
             db.query(KnowledgeNode)
             .filter(
-                KnowledgeNode.node_id.in_(knowledge_node_ids)
+                KnowledgeNode.node_id.in_(
+                    knowledge_node_ids
+                )
             )
             .all()
         )
@@ -621,6 +1016,7 @@ def evaluate_quiz(user_id, lesson_id, answers):
 
         for answer_data in answers:
             quiz_id = answer_data["quiz_id"]
+
             selected_answer = (
                 answer_data["answer"]
                 .strip()
@@ -630,7 +1026,8 @@ def evaluate_quiz(user_id, lesson_id, answers):
             quiz = quiz_map[quiz_id]
 
             correct = (
-                selected_answer == quiz.correct_answer.upper()
+                selected_answer
+                == quiz.correct_answer.upper()
             )
 
             knowledge_node = knowledge_node_map.get(
@@ -640,8 +1037,8 @@ def evaluate_quiz(user_id, lesson_id, answers):
             if knowledge_node is None:
                 return {
                     "message": (
-                        "Knowledge concept for quiz question "
-                        "was not found."
+                        "Knowledge concept for quiz "
+                        "question was not found."
                     ),
                     "status_code": 500
                 }
@@ -651,28 +1048,41 @@ def evaluate_quiz(user_id, lesson_id, answers):
             if node_id not in concept_performance:
                 concept_performance[node_id] = {
                     "knowledge_node_id": node_id,
-                    "concept_name": knowledge_node.concept_name,
+                    "concept_name": (
+                        knowledge_node.concept_name
+                    ),
                     "total_questions": 0,
                     "correct_answers": 0,
                     "incorrect_answers": 0
                 }
 
-            concept_performance[node_id]["total_questions"] += 1
+            concept_performance[node_id][
+                "total_questions"
+            ] += 1
 
             if correct:
-                concept_performance[node_id]["correct_answers"] += 1
+                concept_performance[node_id][
+                    "correct_answers"
+                ] += 1
             else:
-                concept_performance[node_id]["incorrect_answers"] += 1
+                concept_performance[node_id][
+                    "incorrect_answers"
+                ] += 1
 
             results.append(
                 {
                     "quiz_id": quiz.quiz_id,
                     "knowledge_node_id": node_id,
-                    "concept_name": knowledge_node.concept_name,
+                    "concept_name": (
+                        knowledge_node.concept_name
+                    ),
                     "selected_answer": selected_answer,
                     "correct": correct,
-                    "correct_answer": quiz.correct_answer,
-                    "explanation": quiz.explanation
+                    "correct_answer": (
+                        quiz.correct_answer
+                    ),
+                    "explanation": quiz.explanation,
+                    "quiz_type": quiz.quiz_type
                 }
             )
 
@@ -702,7 +1112,9 @@ def evaluate_quiz(user_id, lesson_id, answers):
             "lesson_title": lesson.title,
             "total_questions": total_questions,
             "correct_answers": correct_answers,
-            "incorrect_answers": total_questions - correct_answers,
+            "incorrect_answers": (
+                total_questions - correct_answers
+            ),
             "score": round(score, 2),
             "results": results,
             "concept_performance": list(
@@ -721,11 +1133,15 @@ def evaluate_quiz(user_id, lesson_id, answers):
     finally:
         db.close()
 
+
 # ---------------------------------------------------------
 # CODING CHALLENGE GENERATION
 # ---------------------------------------------------------
 
-def generate_coding_challenge(user_id, lesson_id):
+def generate_coding_challenge(
+    user_id,
+    lesson_id
+):
     db = SessionLocal()
 
     try:
@@ -750,7 +1166,9 @@ def generate_coding_challenge(user_id, lesson_id):
 
         course = (
             db.query(Course)
-            .filter(Course.course_id == lesson.course_id)
+            .filter(
+                Course.course_id == lesson.course_id
+            )
             .first()
         )
 
@@ -778,7 +1196,10 @@ def generate_coding_challenge(user_id, lesson_id):
             difficulty=course.difficulty
         )
 
-        if "status_code" in ai_result and ai_result["status_code"] != 200:
+        if (
+            "status_code" in ai_result
+            and ai_result["status_code"] != 200
+        ):
             return ai_result
 
         challenge = CodingChallenge(
@@ -794,7 +1215,8 @@ def generate_coding_challenge(user_id, lesson_id):
 
         return {
             "message": (
-                "Coding challenge generated and saved successfully."
+                "Coding challenge generated and "
+                "saved successfully."
             ),
             "challenge_id": challenge.challenge_id,
             "lesson_id": challenge.lesson_id,
@@ -808,7 +1230,9 @@ def generate_coding_challenge(user_id, lesson_id):
         db.rollback()
 
         return {
-            "message": "Coding challenge generation failed.",
+            "message": (
+                "Coding challenge generation failed."
+            ),
             "error": str(error),
             "status_code": 500
         }
@@ -877,6 +1301,10 @@ def call_coding_challenge_ai_service(
         }
 
 
+# ---------------------------------------------------------
+# NORMAL QUIZ AI SERVICE
+# ---------------------------------------------------------
+
 def call_quiz_ai_service(
     lesson_id,
     lesson_title,
@@ -935,5 +1363,73 @@ def call_quiz_ai_service(
     except json.JSONDecodeError:
         return {
             "message": "AI Service returned invalid JSON.",
+            "status_code": 502
+        }
+
+
+# ---------------------------------------------------------
+# REVISION QUIZ AI SERVICE
+# ---------------------------------------------------------
+
+def call_revision_quiz_ai_service(
+    course_id,
+    course_title,
+    number_of_questions,
+    concepts
+):
+    payload = json.dumps(
+        {
+            "course_id": course_id,
+            "course_title": course_title,
+            "number_of_questions": number_of_questions,
+            "concepts": concepts
+        }
+    ).encode("utf-8")
+
+    request = Request(
+        AI_REVISION_QUIZ_SERVICE_URL,
+        data=payload,
+        headers={
+            "Content-Type": "application/json"
+        },
+        method="POST"
+    )
+
+    try:
+        with urlopen(request, timeout=120) as response:
+            return json.loads(
+                response.read().decode("utf-8")
+            )
+
+    except HTTPError as error:
+        try:
+            error_body = error.read().decode("utf-8")
+            error_data = json.loads(error_body)
+
+            return {
+                "message": error_data.get(
+                    "message",
+                    "AI Service returned an error."
+                ),
+                "status_code": 502
+            }
+
+        except Exception:
+            return {
+                "message": "AI Service returned an error.",
+                "status_code": 502
+            }
+
+    except URLError:
+        return {
+            "message": "AI Service is unavailable.",
+            "status_code": 503
+        }
+
+    except json.JSONDecodeError:
+        return {
+            "message": (
+                "AI Service returned invalid JSON."
+            ),
             "status_code": 502
         }

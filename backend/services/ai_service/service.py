@@ -742,6 +742,248 @@ def validate_quiz_response(
 
     return None
 
+
+# ---------------------------------------------------------
+# REVISION QUIZ GENERATION
+# ---------------------------------------------------------
+
+def build_revision_quiz_prompt(
+    course_id,
+    course_title,
+    number_of_questions,
+    concepts,
+):
+    concept_information = []
+
+    for concept in concepts:
+        concept_information.append(
+            {
+                "concept_name": concept["concept_name"],
+                "description": concept["description"],
+            }
+        )
+
+    return f"""
+You are an AI revision-quiz generation assistant.
+
+Generate multiple-choice revision questions for an educational course.
+
+The purpose of this quiz is to help a learner review concepts
+that the learner is due to revise.
+
+Course ID: {course_id}
+Course Title: {course_title}
+Number of Questions: {number_of_questions}
+
+Concepts currently due for revision:
+{json.dumps(concept_information, indent=2)}
+
+Return ONLY valid JSON.
+
+The JSON must contain exactly these top-level fields:
+
+{{
+    "questions": [
+        {{
+            "question": "string",
+            "option_a": "string",
+            "option_b": "string",
+            "option_c": "string",
+            "option_d": "string",
+            "correct_answer": "A",
+            "explanation": "string",
+            "concept_name": "string"
+        }}
+    ]
+}}
+
+Requirements:
+
+1. Generate exactly {number_of_questions} questions.
+2. Every question must test one of the provided revision concepts.
+3. Each question must be associated with exactly one concept.
+4. The concept_name must exactly match one of the provided concept names.
+5. Questions should focus on recalling and understanding previously learned concepts.
+6. Questions should help reinforce the learner's understanding of the concept.
+7. Do not introduce concepts that are not in the provided list.
+8. Each question must have exactly four options.
+9. The options must use option_a, option_b, option_c, and option_d.
+10. The correct_answer must contain only one of: A, B, C, or D.
+11. The correct answer must actually match one of the four options.
+12. Provide a clear explanation for the correct answer.
+13. Avoid ambiguous questions.
+14. Avoid duplicate questions.
+15. Questions should be appropriate for revision practice.
+16. Do not include markdown or code fences.
+17. Do not include fields outside the requested JSON structure.
+18. Do not calculate or invent unrelated information.
+"""
+
+
+def generate_revision_quiz_with_ai(
+    course_id,
+    course_title,
+    number_of_questions,
+    concepts,
+):
+    ai_mode = os.getenv("AI_MODE", "development").lower()
+
+    if ai_mode == "development":
+        return generate_development_revision_quiz(
+            course_id=course_id,
+            course_title=course_title,
+            number_of_questions=number_of_questions,
+            concepts=concepts,
+        )
+
+    if ai_mode != "gemini":
+        return {
+            "message": "Invalid AI_MODE configuration.",
+            "status_code": 500,
+        }
+
+    return generate_gemini_revision_quiz(
+        course_id=course_id,
+        course_title=course_title,
+        number_of_questions=number_of_questions,
+        concepts=concepts,
+    )
+
+
+def generate_development_revision_quiz(
+    course_id,
+    course_title,
+    number_of_questions,
+    concepts,
+):
+    if not concepts:
+        return {
+            "message": "No revision concepts found.",
+            "status_code": 400,
+        }
+
+    questions = []
+
+    for question_number in range(number_of_questions):
+        concept = concepts[
+            question_number % len(concepts)
+        ]
+
+        concept_name = concept["concept_name"]
+
+        questions.append(
+            {
+                "question": (
+                    f"Which statement best helps review "
+                    f"the concept {concept_name}?"
+                ),
+                "option_a": (
+                    f"{concept_name} is a concept covered "
+                    f"in the course."
+                ),
+                "option_b": (
+                    "It is unrelated to the course."
+                ),
+                "option_c": (
+                    "It is used only for entertainment."
+                ),
+                "option_d": (
+                    "It has no educational relevance."
+                ),
+                "correct_answer": "A",
+                "explanation": (
+                    f"{concept_name} is one of the concepts "
+                    f"covered in the course and is currently "
+                    f"due for revision."
+                ),
+                "concept_name": concept_name,
+            }
+        )
+
+    validation_error = validate_quiz_response(
+        {
+            "questions": questions
+        },
+        number_of_questions,
+        concepts,
+    )
+
+    if validation_error:
+        return {
+            "message": validation_error,
+            "status_code": 502,
+        }
+
+    return {
+        "questions": questions
+    }
+
+
+def generate_gemini_revision_quiz(
+    course_id,
+    course_title,
+    number_of_questions,
+    concepts,
+):
+    api_key = os.getenv("GEMINI_API_KEY")
+
+    if not api_key:
+        return {
+            "message": "GEMINI_API_KEY is not configured.",
+            "status_code": 500,
+        }
+
+    try:
+        client = genai.Client(api_key=api_key)
+
+        prompt = build_revision_quiz_prompt(
+            course_id=course_id,
+            course_title=course_title,
+            number_of_questions=number_of_questions,
+            concepts=concepts,
+        )
+
+        response = client.models.generate_content(
+            model="gemini-3.5-flash",
+            contents=prompt,
+        )
+
+        if not response.text:
+            return {
+                "message": "Gemini returned an empty response.",
+                "status_code": 502,
+            }
+
+        quiz_data = json.loads(response.text)
+
+        validation_error = validate_quiz_response(
+            quiz_data,
+            number_of_questions,
+            concepts,
+        )
+
+        if validation_error:
+            return {
+                "message": validation_error,
+                "status_code": 502,
+            }
+
+        return quiz_data
+
+    except json.JSONDecodeError:
+        return {
+            "message": "Gemini returned an invalid JSON response.",
+            "status_code": 502,
+        }
+
+    except Exception as error:
+        return {
+            "message": "Gemini revision quiz generation failed.",
+            "error": str(error),
+            "status_code": 502,
+        }
+
+
 # ---------------------------------------------------------
 # CODING CHALLENGE GENERATION
 # ---------------------------------------------------------
@@ -909,6 +1151,7 @@ def validate_coding_challenge_response(challenge_data):
             return f"{field} must be a string."
 
     return None
+
 
 # ============================================================
 # AKDG - Adaptive Knowledge Dependency Graph

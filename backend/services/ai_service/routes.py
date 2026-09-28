@@ -4,6 +4,7 @@ from services.ai_service.service import (
     generate_course_with_ai,
     generate_lesson_with_ai,
     generate_quiz_with_ai,
+    generate_revision_quiz_with_ai,
     generate_coding_challenge_with_ai,
     generate_knowledge_graph_with_ai,
 )
@@ -145,6 +146,61 @@ def generate_quiz():
 
     return jsonify(result), status_code
 
+
+@ai_routes.route("/api/ai/revision-quiz", methods=["POST"])
+def generate_revision_quiz():
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    course_id = data.get("course_id")
+    course_title = data.get("course_title")
+    number_of_questions = data.get("number_of_questions")
+    concepts = data.get("concepts")
+
+    if not course_id:
+        return jsonify({
+            "message": "Course ID is required."
+        }), 400
+
+    if not course_title:
+        return jsonify({
+            "message": "Course title is required."
+        }), 400
+
+    if number_of_questions is None:
+        return jsonify({
+            "message": "Number of questions is required."
+        }), 400
+
+    if not isinstance(number_of_questions, int):
+        return jsonify({
+            "message": "Number of questions must be an integer."
+        }), 400
+
+    if number_of_questions <= 0:
+        return jsonify({
+            "message": "Number of questions must be greater than zero."
+        }), 400
+
+    if not isinstance(concepts, list) or not concepts:
+        return jsonify({
+            "message": "Concepts must be a non-empty list."
+        }), 400
+
+    result = generate_revision_quiz_with_ai(
+        course_id=course_id,
+        course_title=course_title,
+        number_of_questions=number_of_questions,
+        concepts=concepts,
+    )
+
+    status_code = result.pop("status_code", 200)
+
+    return jsonify(result), status_code
 
 @ai_routes.route("/api/ai/challenge", methods=["POST"])
 def generate_challenge():

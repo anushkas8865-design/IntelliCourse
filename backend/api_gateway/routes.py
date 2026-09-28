@@ -261,7 +261,7 @@ def generate_coding_challenge():
 
 
 # =============================================================
-# GENERATE QUIZ ROUTE
+# QUIZ ROUTES
 # =============================================================
 
 @gateway_routes.route("/api/quiz/generate", methods=["POST"])
@@ -288,6 +288,35 @@ def generate_quiz():
     )
 
     return jsonify(result), status_code
+
+@gateway_routes.route(
+    "/api/quiz/revision/generate",
+    methods=["POST"]
+)
+def generate_revision_quiz():
+    data = request.get_json(silent=True)
+
+    if not data:
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
+
+    authorization = request.headers.get("Authorization")
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
+    result, status_code = forward_lesson_request(
+        method="POST",
+        path="/api/quiz/revision/generate",
+        data=data,
+        authorization=authorization
+    )
+
+    return jsonify(result), status_code
+
 
 # =============================================================
 # EVALUATE QUIZ ROUTE
@@ -361,6 +390,31 @@ def get_user_progress(user_id):
     result, status_code = forward_progress_request(
         method="GET",
         path=f"/api/progress/{user_id}",
+        authorization=authorization
+    )
+
+    return jsonify(result), status_code
+
+
+# =============================================================
+# AMRE REVISION ROUTE
+# =============================================================
+
+@gateway_routes.route(
+    "/api/progress/revision/<course_id>",
+    methods=["GET"]
+)
+def get_revision_concepts(course_id):
+    authorization = request.headers.get("Authorization")
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
+    result, status_code = forward_progress_request(
+        method="GET",
+        path=f"/api/progress/revision/{course_id}",
         authorization=authorization
     )
 

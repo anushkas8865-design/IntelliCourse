@@ -6,6 +6,10 @@ from services.progress_service.service import (
     get_user_progress
 )
 
+from services.progress_service.amre_service import (
+    get_due_revision_concepts
+)
+
 
 progress_routes = Blueprint(
     "progress_routes",
@@ -27,6 +31,7 @@ def update_user_progress():
     completed_lessons = data.get("completed_lessons")
     quiz_score = data.get("quiz_score")
     concept_performance = data.get("concept_performance")
+    event_type = data.get("event_type", "normal")
 
     if not course_id:
         return jsonify({
@@ -49,6 +54,11 @@ def update_user_progress():
                 "message": "Concept performance must be a list."
             }), 400
 
+    if event_type not in {"normal", "revision"}:
+        return jsonify({
+             "message": "Invalid AMRE event type."
+             }), 400
+
     user_id = get_jwt_identity()
 
     result = update_progress(
@@ -56,7 +66,8 @@ def update_user_progress():
         course_id=course_id,
         completed_lessons=completed_lessons,
         quiz_score=quiz_score,
-        concept_performance=concept_performance
+        concept_performance=concept_performance,
+        event_type=event_type
     )
 
     status_code = result.pop("status_code", 200)
@@ -87,6 +98,22 @@ def get_user_progress_route(user_id):
     # ---------------------------------------------------------
 
     result = get_user_progress(user_id)
+
+    status_code = result.pop("status_code", 200)
+
+    return jsonify(result), status_code
+
+@progress_routes.route(
+    "/api/progress/revision",
+    methods=["GET"]
+)
+@jwt_required()
+def get_revision_concepts():
+    user_id = get_jwt_identity()
+
+    result = get_due_revision_concepts(
+        user_id=user_id
+    )
 
     status_code = result.pop("status_code", 200)
 
