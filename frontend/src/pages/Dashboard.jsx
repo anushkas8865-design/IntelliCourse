@@ -218,6 +218,15 @@ function Dashboard() {
           <button
             type="button"
             className="nav-item"
+            onClick={() => navigate('/revision-quizzes')}
+          >
+            <span>↻</span>
+            Revision Quizzes
+          </button>
+
+          <button
+            type="button"
+            className="nav-item"
           >
             <span>✦</span>
             AI Assistant

@@ -9,6 +9,8 @@ import CreateCourse from './pages/CreateCourse'
 import CourseDetails from './pages/CourseDetails'
 import Lesson from './pages/Lesson'
 import Settings from './pages/Settings'
+import RevisionQuizzes from './pages/RevisionQuizzes'
+import RevisionQuiz from './pages/RevisionQuiz'
 
 import { useAuth } from './context/AuthContext'
 
@@ -34,19 +36,34 @@ function App() {
         ) : (
           <>
             <Route path="/" element={<Dashboard />} />
+
+            <Route
+              path="/revision-quizzes"
+              element={<RevisionQuizzes />}
+            />
+
+            <Route
+            path="/revision-quiz"
+            element={<RevisionQuiz />}
+            />
+
             <Route path="/courses" element={<MyCourses />} />
+
             <Route
               path="/create-course"
               element={<CreateCourse />}
             />
+
             <Route
               path="/course/:courseId"
               element={<CourseDetails />}
             />
+
             <Route
               path="/lesson/:lessonId"
               element={<Lesson />}
             />
+
             <Route path="/settings" element={<Settings />} />
 
             <Route

@@ -1,0 +1,111 @@
+.revision-page {
+  min-height: 100vh;
+  background: #f8f9fd;
+  color: #172554;
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.revision-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.revision-back-button {
+  border: none;
+  background: transparent;
+  color: #5b3eea;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 5px 0;
+}
+
+.revision-back-button:hover {
+  color: #4327c9;
+}
+
+.revision-header {
+  margin-top: 28px;
+  margin-bottom: 28px;
+}
+
+.revision-label {
+  color: #5b3eea;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+}
+
+.revision-header h1 {
+  margin: 8px 0 8px;
+  color: #172554;
+  font-size: 29px;
+  font-weight: 700;
+}
+
+.revision-header p {
+  margin: 0;
+  color: #60708e;
+  font-size: 14px;
+}
+
+.revision-card {
+  background: #ffffff;
+  border: 1px solid #e5e8f0;
+  border-radius: 13px;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.revision-section-heading {
+  margin-bottom: 24px;
+}
+
+.revision-section-heading h2 {
+  margin: 0;
+  color: #172554;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.revision-section-heading p {
+  margin: 5px 0 0;
+  color: #71809d;
+  font-size: 13px;
+}
+
+.revision-empty {
+  border: 1px dashed #d9ddea;
+  border-radius: 11px;
+  padding: 42px 24px;
+  text-align: center;
+}
+
+.revision-empty h3 {
+  margin: 0 0 8px;
+  color: #263657;
+  font-size: 16px;
+}
+
+.revision-empty p {
+  max-width: 520px;
+  margin: 0 auto;
+  color: #71809d;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .revision-page {
+    padding: 22px 18px;
+  }
+
+  .revision-header h1 {
+    font-size: 24px;
+  }
+
+  .revision-card {
+    padding: 20px;
+  }
+}

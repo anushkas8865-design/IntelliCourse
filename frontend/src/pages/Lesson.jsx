@@ -19,6 +19,13 @@ function Lesson() {
   const [completeLoading, setCompleteLoading] = useState(false)
   const [completeError, setCompleteError] = useState('')
 
+  const [quiz, setQuiz] = useState(null)
+  const [quizAnswers, setQuizAnswers] = useState({})
+  const [quizResult, setQuizResult] = useState(null)
+  const [quizLoading, setQuizLoading] = useState(false)
+  const [quizSubmitting, setQuizSubmitting] = useState(false)
+  const [quizError, setQuizError] = useState('')
+
   const [loading, setLoading] = useState(true)
   const [challengeLoading, setChallengeLoading] = useState(false)
 
@@ -86,6 +93,92 @@ function Lesson() {
 
     loadLesson()
   }, [lessonId, token, user])
+
+  async function generateQuiz() {
+    if (!token || !lessonId) {
+      return
+    }
+
+    setQuizLoading(true)
+    setQuizError('')
+    setQuiz(null)
+    setQuizAnswers({})
+    setQuizResult(null)
+
+    try {
+      const data = await apiRequest('/api/quiz/generate', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          lesson_id: lessonId,
+          number_of_questions: 5,
+        }),
+      })
+
+      setQuiz(data)
+    } catch (error) {
+      console.error('Quiz generation failed:', error)
+      setQuizError(error.message || 'Unable to generate quiz.')
+    } finally {
+      setQuizLoading(false)
+    }
+  }
+
+  function handleQuizAnswer(quizId, answer) {
+    if (quizSubmitting || quizResult) {
+      return
+    }
+
+    setQuizAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [quizId]: answer,
+    }))
+  }
+
+  async function submitQuiz() {
+    if (!token || !lessonId || !quiz?.questions?.length) {
+      return
+    }
+
+    const unansweredQuestions = quiz.questions.filter(
+      (question) => !quizAnswers[question.quiz_id]
+    )
+
+    if (unansweredQuestions.length > 0) {
+      setQuizError('Please answer all questions before submitting.')
+      return
+    }
+
+    setQuizSubmitting(true)
+    setQuizError('')
+
+    try {
+      const answers = quiz.questions.map((question) => ({
+        quiz_id: question.quiz_id,
+        answer: quizAnswers[question.quiz_id],
+      }))
+
+      const data = await apiRequest('/api/quiz/evaluate', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          lesson_id: lessonId,
+          answers,
+        }),
+      })
+
+      setQuizResult(data)
+    } catch (error) {
+      console.error('Quiz evaluation failed:', error)
+      setQuizError(error.message || 'Unable to evaluate quiz.')
+    } finally {
+      setQuizSubmitting(false)
+    }
+  }
 
   async function generateCodingChallenge() {
     if (!token || !lessonId) {
@@ -290,6 +383,162 @@ function Lesson() {
                 </a>
               ))}
             </div>
+          )}
+        </section>
+
+        <section className="lesson-card">
+          <div className="lesson-section-heading">
+            <h2>Quiz</h2>
+            <p>
+              Test your understanding of this lesson.
+            </p>
+          </div>
+
+          {!quiz ? (
+            <div className="quiz-start">
+              <p>
+                Generate a short quiz to check your understanding.
+              </p>
+
+              <button
+                type="button"
+                className="lesson-primary-button"
+                onClick={generateQuiz}
+                disabled={quizLoading}
+              >
+                {quizLoading
+                  ? 'Generating Quiz...'
+                  : 'Generate Quiz'}
+              </button>
+            </div>
+          ) : quizResult ? (
+            <div className="quiz-result">
+              <div className="quiz-score">
+                <span>QUIZ SCORE</span>
+                <strong>{quizResult.score}%</strong>
+              </div>
+
+              <div className="quiz-result-summary">
+                <p>
+                  You answered{' '}
+                  <strong>{quizResult.correct_answers}</strong> out of{' '}
+                  <strong>{quizResult.total_questions}</strong>{' '}
+                  questions correctly.
+                </p>
+              </div>
+
+              <div className="quiz-results-list">
+                {quizResult.results?.map((result, index) => (
+                  <div
+                    key={result.quiz_id}
+                    className={`quiz-result-item ${
+                      result.correct
+                        ? 'quiz-result-correct'
+                        : 'quiz-result-incorrect'
+                    }`}
+                  >
+                    <div className="quiz-result-question">
+                      <span>Question {index + 1}</span>
+                      <strong>
+                        {result.correct ? 'Correct' : 'Incorrect'}
+                      </strong>
+                    </div>
+
+                    <p>{quiz.questions[index]?.question}</p>
+
+                    <p>
+                      Your answer:{' '}
+                      <strong>{result.selected_answer}</strong>
+                    </p>
+
+                    {!result.correct && (
+                      <p>
+                        Correct answer:{' '}
+                        <strong>{result.correct_answer}</strong>
+                      </p>
+                    )}
+
+                    <p className="quiz-explanation">
+                      {result.explanation ||
+                        'No explanation available.'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="lesson-primary-button"
+                onClick={generateQuiz}
+                disabled={quizLoading}
+              >
+                {quizLoading
+                  ? 'Generating Quiz...'
+                  : 'Try Another Quiz'}
+              </button>
+            </div>
+          ) : (
+            <div className="quiz-content">
+              {quiz.questions?.map((question, index) => (
+                <div
+                  key={question.quiz_id}
+                  className="quiz-question"
+                >
+                  <h3>
+                    {index + 1}. {question.question}
+                  </h3>
+
+                  <div className="quiz-options">
+                    {[
+                      ['A', question.option_a],
+                      ['B', question.option_b],
+                      ['C', question.option_c],
+                      ['D', question.option_d],
+                    ].map(([letter, option]) => (
+                      <button
+                        key={letter}
+                        type="button"
+                        className={`quiz-option ${
+                          quizAnswers[question.quiz_id] === letter
+                            ? 'quiz-option-selected'
+                            : ''
+                        }`}
+                        onClick={() =>
+                          handleQuizAnswer(
+                            question.quiz_id,
+                            letter
+                          )
+                        }
+                        disabled={quizSubmitting}
+                      >
+                        <span className="quiz-option-letter">
+                          {letter}
+                        </span>
+
+                        <span>{option}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="lesson-primary-button quiz-submit-button"
+                onClick={submitQuiz}
+                disabled={quizSubmitting}
+              >
+                {quizSubmitting
+                  ? 'Submitting Quiz...'
+                  : 'Submit Quiz'}
+              </button>
+            </div>
+          )}
+
+          {quizError && (
+            <p className="quiz-error">
+              {quizError}
+            </p>
           )}
         </section>
 
