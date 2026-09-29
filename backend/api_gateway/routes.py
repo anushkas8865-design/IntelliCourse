@@ -401,10 +401,10 @@ def get_user_progress(user_id):
 # =============================================================
 
 @gateway_routes.route(
-    "/api/progress/revision/<course_id>",
+    "/api/progress/revision",
     methods=["GET"]
 )
-def get_revision_concepts(course_id):
+def get_revision_concepts():
     authorization = request.headers.get("Authorization")
 
     if not authorization:
@@ -414,7 +414,7 @@ def get_revision_concepts(course_id):
 
     result, status_code = forward_progress_request(
         method="GET",
-        path=f"/api/progress/revision/{course_id}",
+        path="/api/progress/revision",
         authorization=authorization
     )
 

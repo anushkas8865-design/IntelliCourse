@@ -880,30 +880,12 @@ def generate_revision_quiz(
 def evaluate_quiz(
     user_id,
     lesson_id,
-    answers
+    answers,
+    quiz_type="normal"
 ):
     db = SessionLocal()
 
     try:
-        lesson = (
-            db.query(Lesson)
-            .join(
-                Course,
-                Lesson.course_id == Course.course_id
-            )
-            .filter(
-                Lesson.lesson_id == lesson_id,
-                Course.user_id == user_id
-            )
-            .first()
-        )
-
-        if lesson is None:
-            return {
-                "message": "Lesson not found.",
-                "status_code": 404
-            }
-
         if not isinstance(answers, list) or not answers:
             return {
                 "message": "Quiz answers are required.",
@@ -958,28 +940,157 @@ def evaluate_quiz(
 
             quiz_ids.append(quiz_id)
 
-        quizzes = (
-            db.query(Quiz)
-            .filter(
-                Quiz.lesson_id == lesson_id,
-                Quiz.quiz_id.in_(quiz_ids)
+        # -----------------------------------------------------
+        # NORMAL QUIZ
+        # -----------------------------------------------------
+
+        if quiz_type == "normal":
+
+            lesson = (
+                db.query(Lesson)
+                .join(
+                    Course,
+                    Lesson.course_id == Course.course_id
+                )
+                .filter(
+                    Lesson.lesson_id == lesson_id,
+                    Course.user_id == user_id
+                )
+                .first()
             )
-            .all()
-        )
 
-        quiz_map = {
-            quiz.quiz_id: quiz
-            for quiz in quizzes
-        }
+            if lesson is None:
+                return {
+                    "message": "Lesson not found.",
+                    "status_code": 404
+                }
 
-        if len(quiz_map) != len(set(quiz_ids)):
+            quizzes = (
+                db.query(Quiz)
+                .filter(
+                    Quiz.lesson_id == lesson_id,
+                    Quiz.quiz_id.in_(quiz_ids),
+                    Quiz.quiz_type == "normal"
+                )
+                .all()
+            )
+
+            quiz_map = {
+                quiz.quiz_id: quiz
+                for quiz in quizzes
+            }
+
+            if len(quiz_map) != len(set(quiz_ids)):
+                return {
+                    "message": (
+                        "One or more quiz questions do not "
+                        "belong to this lesson."
+                    ),
+                    "status_code": 400
+                }
+
+            course_id = lesson.course_id
+            lesson_title = lesson.title
+            result_lesson_id = lesson.lesson_id
+
+        # -----------------------------------------------------
+        # REVISION QUIZ
+        # -----------------------------------------------------
+
+        elif quiz_type == "revision":
+
+            quizzes = (
+                db.query(Quiz)
+                .join(
+                    Lesson,
+                    Quiz.lesson_id == Lesson.lesson_id
+                )
+                .join(
+                    Course,
+                    Lesson.course_id == Course.course_id
+                )
+                .filter(
+                    Quiz.quiz_id.in_(quiz_ids),
+                    Quiz.quiz_type == "revision",
+                    Course.user_id == user_id
+                )
+                .all()
+            )
+
+            quiz_map = {
+                quiz.quiz_id: quiz
+                for quiz in quizzes
+            }
+
+            if len(quiz_map) != len(set(quiz_ids)):
+                return {
+                    "message": (
+                        "One or more revision quiz questions "
+                        "are invalid."
+                    ),
+                    "status_code": 400
+                }
+
+            course_ids = set()
+
+            for quiz in quizzes:
+                lesson = (
+                    db.query(Lesson)
+                    .filter(
+                        Lesson.lesson_id == quiz.lesson_id
+                    )
+                    .first()
+                )
+
+                if lesson is None:
+                    return {
+                        "message": (
+                            "Lesson for a revision quiz "
+                            "question was not found."
+                        ),
+                        "status_code": 500
+                    }
+
+                course_ids.add(lesson.course_id)
+
+            if len(course_ids) != 1:
+                return {
+                    "message": (
+                        "Revision quiz questions must belong "
+                        "to the same course."
+                    ),
+                    "status_code": 400
+                }
+
+            course_id = next(iter(course_ids))
+
+            course = (
+                db.query(Course)
+                .filter(
+                    Course.course_id == course_id,
+                    Course.user_id == user_id
+                )
+                .first()
+            )
+
+            if course is None:
+                return {
+                    "message": "Course not found.",
+                    "status_code": 404
+                }
+
+            lesson_title = course.title
+            result_lesson_id = None
+
+        else:
             return {
-                "message": (
-                    "One or more quiz questions do not "
-                    "belong to this lesson."
-                ),
+                "message": "Invalid quiz type.",
                 "status_code": 400
             }
+
+        # -----------------------------------------------------
+        # GET KNOWLEDGE NODES
+        # -----------------------------------------------------
 
         knowledge_node_ids = {
             quiz.knowledge_node_id
@@ -1013,6 +1124,10 @@ def evaluate_quiz(
         results = []
 
         concept_performance = {}
+
+        # -----------------------------------------------------
+        # EVALUATE ANSWERS
+        # -----------------------------------------------------
 
         for answer_data in answers:
             quiz_id = answer_data["quiz_id"]
@@ -1108,8 +1223,10 @@ def evaluate_quiz(
 
         return {
             "message": "Quiz evaluated successfully.",
-            "lesson_id": lesson.lesson_id,
-            "lesson_title": lesson.title,
+            "lesson_id": result_lesson_id,
+            "course_id": course_id,
+            "lesson_title": lesson_title,
+            "quiz_type": quiz_type,
             "total_questions": total_questions,
             "correct_answers": correct_answers,
             "incorrect_answers": (
@@ -1132,7 +1249,6 @@ def evaluate_quiz(
 
     finally:
         db.close()
-
 
 # ---------------------------------------------------------
 # CODING CHALLENGE GENERATION

@@ -134,11 +134,13 @@ def login():
             }
         }), 200
 
-    except Exception:
+    except Exception as error:
         db.rollback()
-
+        
+        print("LOGIN ERROR:", repr(error))
+        
         return jsonify({
-            "error": "Login failed."
+        "error": "Login failed."
         }), 500
 
     finally:

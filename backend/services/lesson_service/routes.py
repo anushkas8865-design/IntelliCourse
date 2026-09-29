@@ -175,13 +175,29 @@ def submit_quiz():
     data = request.get_json(silent=True)
 
     if not data:
-        return jsonify({"message": "Request body is required."}), 400
+        return jsonify({
+            "message": "Request body is required."
+        }), 400
 
     lesson_id = data.get("lesson_id")
+    course_id = data.get("course_id")
+    quiz_type = data.get("quiz_type", "normal")
     answers = data.get("answers")
 
-    if not lesson_id:
-        return jsonify({"message": "Lesson ID is required."}), 400
+    if quiz_type not in {"normal", "revision"}:
+        return jsonify({
+            "message": "Invalid quiz type."
+        }), 400
+
+    if quiz_type == "normal" and not lesson_id:
+        return jsonify({
+            "message": "Lesson ID is required."
+        }), 400
+
+    if quiz_type == "revision" and not course_id:
+        return jsonify({
+            "message": "Course ID is required."
+        }), 400
 
     if not isinstance(answers, list) or not answers:
         return jsonify({
@@ -193,7 +209,8 @@ def submit_quiz():
     result = evaluate_quiz(
         user_id=user_id,
         lesson_id=lesson_id,
-        answers=answers
+        answers=answers,
+        quiz_type=quiz_type
     )
 
     status_code = result.pop("status_code", 200)
@@ -208,23 +225,17 @@ def submit_quiz():
     db = SessionLocal()
 
     try:
-        lesson = (
-            db.query(Lesson)
-            .filter(
-                Lesson.lesson_id == lesson_id
-            )
-            .first()
-        )
+        actual_course_id = result.get("course_id")
 
-        if lesson is None:
+        if not actual_course_id:
             return jsonify({
-                "message": "Lesson not found."
+                "message": "Course information not found."
             }), 404
 
         course = (
             db.query(Course)
             .filter(
-                Course.course_id == lesson.course_id,
+                Course.course_id == actual_course_id,
                 Course.user_id == user_id
             )
             .first()
@@ -264,7 +275,8 @@ def submit_quiz():
         "concept_performance": result.get(
             "concept_performance",
             []
-        )
+        ),
+        "event_type": quiz_type
     }
 
     try:
@@ -281,16 +293,24 @@ def submit_quiz():
 
         if progress_response.status_code >= 400:
             return jsonify({
-                "message": "Quiz evaluated, but progress update failed.",
+                "message": (
+                    "Quiz evaluated, but progress "
+                    "update failed."
+                ),
                 "quiz_result": result,
-                "progress_error": progress_response.json()
-                if progress_response.content
-                else None
+                "progress_error": (
+                    progress_response.json()
+                    if progress_response.content
+                    else None
+                )
             }), 500
 
     except requests.RequestException as error:
         return jsonify({
-            "message": "Quiz evaluated, but progress service is unavailable.",
+            "message": (
+                "Quiz evaluated, but progress service "
+                "is unavailable."
+            ),
             "quiz_result": result,
             "error": str(error)
         }), 500
