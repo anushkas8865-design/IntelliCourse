@@ -800,23 +800,24 @@ The JSON must contain exactly these top-level fields:
 Requirements:
 
 1. Generate exactly {number_of_questions} questions.
-2. Every question must test one of the provided revision concepts.
-3. Each question must be associated with exactly one concept.
-4. The concept_name must exactly match one of the provided concept names.
-5. Questions should focus on recalling and understanding previously learned concepts.
-6. Questions should help reinforce the learner's understanding of the concept.
-7. Do not introduce concepts that are not in the provided list.
-8. Each question must have exactly four options.
-9. The options must use option_a, option_b, option_c, and option_d.
-10. The correct_answer must contain only one of: A, B, C, or D.
-11. The correct answer must actually match one of the four options.
-12. Provide a clear explanation for the correct answer.
-13. Avoid ambiguous questions.
-14. Avoid duplicate questions.
-15. Questions should be appropriate for revision practice.
-16. Do not include markdown or code fences.
-17. Do not include fields outside the requested JSON structure.
-18. Do not calculate or invent unrelated information.
+2. Every provided revision concept must appear in at least one question.
+3. Every question must test one of the provided revision concepts.
+4. Each question must be associated with exactly one concept.
+5. The concept_name must exactly match one of the provided concept names.
+6. Questions should focus on recalling and understanding previously learned concepts.
+7. Questions should help reinforce the learner's understanding of the concept.
+8. Do not introduce concepts that are not in the provided list.
+9. Each question must have exactly four options.
+10. The options must use option_a, option_b, option_c, and option_d.
+11. The correct_answer must contain only one of: A, B, C, or D.
+12. The correct answer must actually match one of the four options.
+13. Provide a clear explanation for the correct answer.
+14. Avoid ambiguous questions.
+15. Avoid duplicate questions. If a concept has multiple questions, each question must be meaningfully different.
+16. Questions should be appropriate for revision practice.
+17. Do not include markdown or code fences.
+18. Do not include fields outside the requested JSON structure.
+19. Do not calculate or invent unrelated information.
 """
 
 
@@ -874,6 +875,7 @@ def generate_development_revision_quiz(
         questions.append(
             {
                 "question": (
+                    f"Revision check {question_number + 1}: "
                     f"Which statement best helps review "
                     f"the concept {concept_name}?"
                 ),
@@ -911,6 +913,19 @@ def generate_development_revision_quiz(
     if validation_error:
         return {
             "message": validation_error,
+            "status_code": 502,
+        }
+
+    revision_validation_error = (
+        validate_revision_quiz_response(
+            questions,
+            concepts,
+        )
+    )
+
+    if revision_validation_error:
+        return {
+            "message": revision_validation_error,
             "status_code": 502,
         }
 
@@ -968,6 +983,19 @@ def generate_gemini_revision_quiz(
                 "status_code": 502,
             }
 
+        revision_validation_error = (
+            validate_revision_quiz_response(
+                quiz_data["questions"],
+                concepts,
+            )
+        )
+
+        if revision_validation_error:
+            return {
+                "message": revision_validation_error,
+                "status_code": 502,
+            }
+
         return quiz_data
 
     except json.JSONDecodeError:
@@ -982,6 +1010,45 @@ def generate_gemini_revision_quiz(
             "error": str(error),
             "status_code": 502,
         }
+
+
+def validate_revision_quiz_response(
+    questions,
+    concepts,
+):
+    provided_concepts = {
+        concept["concept_name"].strip().lower()
+        for concept in concepts
+    }
+
+    generated_concepts = {
+        question["concept_name"].strip().lower()
+        for question in questions
+    }
+
+    missing_concepts = (
+        provided_concepts - generated_concepts
+    )
+
+    if missing_concepts:
+        return (
+            "Revision quiz must contain at least one "
+            "question for every due concept."
+        )
+
+    normalized_questions = [
+        question["question"].strip().lower()
+        for question in questions
+    ]
+
+    if len(normalized_questions) != len(
+        set(normalized_questions)
+    ):
+        return (
+            "Revision quiz contains duplicate questions."
+        )
+
+    return None
 
 
 # ---------------------------------------------------------

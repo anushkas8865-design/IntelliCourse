@@ -660,11 +660,11 @@ def generate_revision_quiz(
             }
 
         # -----------------------------------------------------
-        # Limit requested questions to available concepts
+        # Determine revision quiz question count
         # -----------------------------------------------------
 
-        number_of_questions = min(
-            number_of_questions,
+        number_of_questions = max(
+            5,
             len(due_concepts)
         )
 
