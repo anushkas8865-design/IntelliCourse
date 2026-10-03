@@ -1,5 +1,6 @@
 import json
 import os
+from uuid import uuid4
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -13,6 +14,12 @@ from shared.models.lesson_video import LessonVideo
 from shared.models.quiz import Quiz
 from shared.models.knowledge_node import KnowledgeNode
 from shared.models.coding_challenge import CodingChallenge
+from shared.models.revision_quiz_attempt import RevisionQuizAttempt
+from shared.models.revision_quiz_answer import RevisionQuizAnswer
+from shared.models.concept_learning_history import (
+    ConceptLearningHistory
+)
+from shared.models.learner_digital_twin import LearnerDigitalTwin
 
 load_dotenv()
 
@@ -564,6 +571,137 @@ def generate_quiz(
         db.close()
 
 
+def adjust_revision_difficulty(
+    course_difficulty,
+    concept_accuracy
+):
+    """
+    Adjust revision difficulty using the learner's
+    latest concept-specific performance.
+    """
+
+    difficulty_levels = [
+        "Beginner",
+        "Intermediate",
+        "Advanced"
+    ]
+
+    normalized_course_difficulty = (
+        str(course_difficulty).strip().title()
+    )
+
+    if normalized_course_difficulty not in difficulty_levels:
+        normalized_course_difficulty = "Intermediate"
+
+    current_index = difficulty_levels.index(
+        normalized_course_difficulty
+    )
+
+    if concept_accuracy < 60:
+        current_index -= 1
+
+    elif concept_accuracy >= 80:
+        current_index += 1
+
+    current_index = max(
+        0,
+        min(current_index, len(difficulty_levels) - 1)
+    )
+
+    return difficulty_levels[current_index]
+
+
+def get_revision_concept_difficulties(
+    db,
+    user_id,
+    course_id,
+    course_difficulty,
+    knowledge_node_ids
+):
+    """
+    Determine the adaptive revision difficulty for
+    each due knowledge concept.
+
+    Latest concept-specific performance is used when
+    available. LDT difficulty is used as the fallback.
+    """
+
+    history_records = (
+        db.query(ConceptLearningHistory)
+        .filter(
+            ConceptLearningHistory.user_id == user_id,
+            ConceptLearningHistory.course_id == course_id,
+            ConceptLearningHistory.knowledge_node_id.in_(
+                knowledge_node_ids
+            )
+        )
+        .order_by(
+            ConceptLearningHistory.event_timestamp.desc(),
+            ConceptLearningHistory.created_at.desc()
+        )
+        .all()
+    )
+
+    latest_history = {}
+
+    for history in history_records:
+        if history.knowledge_node_id not in latest_history:
+            latest_history[
+                history.knowledge_node_id
+            ] = history
+
+    learner_digital_twin = (
+        db.query(LearnerDigitalTwin)
+        .filter(
+            LearnerDigitalTwin.user_id == user_id
+        )
+        .first()
+    )
+
+    fallback_difficulty = course_difficulty
+
+    if (
+        learner_digital_twin is not None
+        and learner_digital_twin.difficulty_level
+    ):
+        fallback_difficulty = (
+            learner_digital_twin.difficulty_level
+        )
+
+    concept_difficulties = {}
+
+    for knowledge_node_id in knowledge_node_ids:
+        history = latest_history.get(
+            knowledge_node_id
+        )
+
+        if history is not None:
+            difficulty = adjust_revision_difficulty(
+                course_difficulty=course_difficulty,
+                concept_accuracy=history.accuracy
+            )
+
+        else:
+            difficulty = (
+                str(fallback_difficulty).strip().title()
+            )
+
+            if difficulty not in {
+                "Beginner",
+                "Intermediate",
+                "Advanced"
+            }:
+                difficulty = (
+                    str(course_difficulty).strip().title()
+                )
+
+        concept_difficulties[
+            knowledge_node_id
+        ] = difficulty
+
+    return concept_difficulties
+
+
 # ---------------------------------------------------------
 # REVISION QUIZ GENERATION
 # ---------------------------------------------------------
@@ -576,31 +714,17 @@ def generate_revision_quiz(
     db = SessionLocal()
 
     try:
-        # -----------------------------------------------------
-        # Validate requested question count
-        # -----------------------------------------------------
-
         if not isinstance(number_of_questions, int):
             return {
-                "message": (
-                    "Number of questions must be "
-                    "an integer."
-                ),
+                "message": "Number of questions must be an integer.",
                 "status_code": 400
             }
 
         if number_of_questions <= 0:
             return {
-                "message": (
-                    "Number of questions must be "
-                    "greater than zero."
-                ),
+                "message": "Number of questions must be greater than zero.",
                 "status_code": 400
             }
-
-        # -----------------------------------------------------
-        # Verify course ownership
-        # -----------------------------------------------------
 
         course = (
             db.query(Course)
@@ -617,10 +741,6 @@ def generate_revision_quiz(
                 "status_code": 404
             }
 
-        # -----------------------------------------------------
-        # Get concepts currently due for revision
-        # -----------------------------------------------------
-
         from services.progress_service.amre_service import (
             get_due_revision_concepts
         )
@@ -635,42 +755,24 @@ def generate_revision_quiz(
         ):
             return revision_result
 
-        # -----------------------------------------------------
-        # Keep only concepts belonging to this course
-        # -----------------------------------------------------
-
         due_concepts = [
             concept
-            for concept in revision_result.get(
-                "concepts",
-                []
-            )
+            for concept in revision_result.get("concepts", [])
             if concept.get("course_id") == course_id
         ]
 
         if not due_concepts:
             return {
-                "message": (
-                    "No concepts are currently due "
-                    "for revision."
-                ),
+                "message": "No concepts are currently due for revision.",
                 "concepts": [],
                 "questions": [],
                 "status_code": 200
             }
 
-        # -----------------------------------------------------
-        # Determine revision quiz question count
-        # -----------------------------------------------------
-
         number_of_questions = max(
             5,
             len(due_concepts)
         )
-
-        # -----------------------------------------------------
-        # Get knowledge nodes
-        # -----------------------------------------------------
 
         knowledge_node_ids = [
             concept["knowledge_node_id"]
@@ -691,12 +793,19 @@ def generate_revision_quiz(
 
         if not knowledge_nodes:
             return {
-                "message": (
-                    "No knowledge concepts found "
-                    "for revision."
-                ),
+                "message": "No knowledge concepts found for revision.",
                 "status_code": 400
             }
+
+        concept_difficulties = (
+            get_revision_concept_difficulties(
+                db=db,
+                user_id=user_id,
+                course_id=course_id,
+                course_difficulty=course.difficulty,
+                knowledge_node_ids=knowledge_node_ids
+            )
+        )
 
         knowledge_node_map = {
             node.node_id: node
@@ -713,30 +822,21 @@ def generate_revision_quiz(
             if knowledge_node is None:
                 continue
 
-            concepts.append(
-                {
-                    "node_id": knowledge_node.node_id,
-                    "concept_name": (
-                        knowledge_node.concept_name
-                    ),
-                    "description": (
-                        knowledge_node.description
-                    )
-                }
-            )
+            concepts.append({
+                "node_id": knowledge_node.node_id,
+                "concept_name": knowledge_node.concept_name,
+                "description": knowledge_node.description,
+                "difficulty": concept_difficulties.get(
+                    knowledge_node.node_id,
+                    course.difficulty
+                )
+            })
 
         if not concepts:
             return {
-                "message": (
-                    "No valid knowledge concepts "
-                    "found for revision."
-                ),
+                "message": "No valid knowledge concepts found for revision.",
                 "status_code": 400
             }
-
-        # -----------------------------------------------------
-        # Generate revision questions through AI Service
-        # -----------------------------------------------------
 
         ai_result = call_revision_quiz_ai_service(
             course_id=course_id,
@@ -755,27 +855,18 @@ def generate_revision_quiz(
 
         if not isinstance(questions, list):
             return {
-                "message": (
-                    "AI Service returned invalid "
-                    "revision quiz data."
-                ),
+                "message": "AI Service returned invalid revision quiz data.",
                 "status_code": 502
             }
-
-        # -----------------------------------------------------
-        # Map AI concept names to actual knowledge nodes
-        # -----------------------------------------------------
 
         concept_node_map = {
             node.concept_name.strip().lower(): node
             for node in knowledge_nodes
         }
 
-        saved_quizzes = []
+        revision_quiz_id = str(uuid4())
 
-        # -----------------------------------------------------
-        # Save revision quizzes
-        # -----------------------------------------------------
+        saved_quizzes = []
 
         for question_data in questions:
             concept_name = question_data.get(
@@ -787,8 +878,8 @@ def generate_revision_quiz(
 
                 return {
                     "message": (
-                        "AI revision quiz question "
-                        "is missing a valid concept."
+                        "AI revision quiz question is missing "
+                        "a valid concept."
                     ),
                     "status_code": 502
                 }
@@ -802,8 +893,8 @@ def generate_revision_quiz(
 
                 return {
                     "message": (
-                        "AI revision quiz question "
-                        "references an unknown concept."
+                        "AI revision quiz question references "
+                        "an unknown concept."
                     ),
                     "status_code": 502
                 }
@@ -811,6 +902,7 @@ def generate_revision_quiz(
             quiz = Quiz(
                 lesson_id=knowledge_node.lesson_id,
                 knowledge_node_id=knowledge_node.node_id,
+                revision_quiz_id=revision_quiz_id,
                 quiz_type="revision",
                 question=question_data["question"],
                 option_a=question_data["option_a"],
@@ -830,16 +922,15 @@ def generate_revision_quiz(
             db.refresh(quiz)
 
         return {
-            "message": (
-                "Revision quiz generated and "
-                "saved successfully."
-            ),
+            "message": "Revision quiz generated and saved successfully.",
             "course_id": course_id,
             "course_title": course.title,
             "quiz_type": "revision",
+            "revision_quiz_id": revision_quiz_id,
             "questions": [
                 {
                     "quiz_id": quiz.quiz_id,
+                    "revision_quiz_id": quiz.revision_quiz_id,
                     "lesson_id": quiz.lesson_id,
                     "question": quiz.question,
                     "option_a": quiz.option_a,
@@ -848,9 +939,7 @@ def generate_revision_quiz(
                     "option_d": quiz.option_d,
                     "correct_answer": quiz.correct_answer,
                     "explanation": quiz.explanation,
-                    "knowledge_node_id": (
-                        quiz.knowledge_node_id
-                    ),
+                    "knowledge_node_id": quiz.knowledge_node_id,
                     "quiz_type": quiz.quiz_type
                 }
                 for quiz in saved_quizzes
@@ -862,9 +951,7 @@ def generate_revision_quiz(
         db.rollback()
 
         return {
-            "message": (
-                "Revision quiz generation failed."
-            ),
+            "message": "Revision quiz generation failed.",
             "error": str(error),
             "status_code": 500
         }
@@ -1027,6 +1114,66 @@ def evaluate_quiz(
                     "message": (
                         "One or more revision quiz questions "
                         "are invalid."
+                    ),
+                    "status_code": 400
+                }
+
+            # -------------------------------------------------
+            # CHECK REVISION QUIZ GROUP
+            # -------------------------------------------------
+
+            revision_quiz_ids = {
+                quiz.revision_quiz_id
+                for quiz in quizzes
+            }
+
+            if None in revision_quiz_ids:
+                return {
+                    "message": (
+                        "One or more revision quiz questions "
+                        "are not linked to a revision quiz."
+                    ),
+                    "status_code": 400
+                }
+
+            if len(revision_quiz_ids) != 1:
+                return {
+                    "message": (
+                        "All revision quiz questions must "
+                        "belong to the same generated revision quiz."
+                    ),
+                    "status_code": 400
+                }
+
+            revision_quiz_id = next(
+                iter(revision_quiz_ids)
+            )
+
+            # -------------------------------------------------
+            # GET ALL QUESTIONS FROM THIS GENERATED QUIZ
+            # -------------------------------------------------
+
+            generated_quizzes = (
+                db.query(Quiz)
+                .filter(
+                    Quiz.revision_quiz_id == revision_quiz_id,
+                    Quiz.quiz_type == "revision"
+                )
+                .all()
+            )
+
+            generated_quiz_ids = {
+                quiz.quiz_id
+                for quiz in generated_quizzes
+            }
+
+            submitted_quiz_ids = set(quiz_ids)
+
+            if submitted_quiz_ids != generated_quiz_ids:
+                return {
+                    "message": (
+                        "All questions from the generated "
+                        "revision quiz must be answered."
                     ),
                     "status_code": 400
                 }
@@ -1221,6 +1368,35 @@ def evaluate_quiz(
                 / performance["total_questions"]
             ) * 100
 
+        # -----------------------------------------------------
+        # SAVE REVISION QUIZ ATTEMPT
+        # -----------------------------------------------------
+
+        if quiz_type == "revision":
+
+            revision_attempt = RevisionQuizAttempt(
+                revision_quiz_id=revision_quiz_id,
+                user_id=user_id
+            )
+
+            db.add(revision_attempt)
+            db.flush()
+
+            for answer_data in answers:
+                revision_answer = RevisionQuizAnswer(
+                    attempt_id=revision_attempt.attempt_id,
+                    quiz_id=answer_data["quiz_id"],
+                    selected_answer=(
+                        answer_data["answer"]
+                        .strip()
+                        .upper()
+                    )
+                )
+
+                db.add(revision_answer)
+
+            db.commit()
+
         return {
             "message": "Quiz evaluated successfully.",
             "lesson_id": result_lesson_id,
@@ -1241,8 +1417,281 @@ def evaluate_quiz(
         }
 
     except Exception as error:
+        db.rollback()
+
         return {
             "message": "Quiz evaluation failed.",
+            "error": str(error),
+            "status_code": 500
+        }
+
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------
+# REVISION QUIZ HISTORY
+# ---------------------------------------------------------
+
+def get_revision_quiz_history(user_id):
+    db = SessionLocal()
+
+    try:
+        attempts = (
+            db.query(RevisionQuizAttempt)
+            .filter(
+                RevisionQuizAttempt.user_id == user_id
+            )
+            .order_by(
+                RevisionQuizAttempt.attempted_at.desc()
+            )
+            .all()
+        )
+
+        history = []
+
+        for attempt in attempts:
+            quiz_rows = (
+                db.query(Quiz, Lesson, Course)
+                .join(
+                    Lesson,
+                    Quiz.lesson_id == Lesson.lesson_id
+                )
+                .join(
+                    Course,
+                    Lesson.course_id == Course.course_id
+                )
+                .filter(
+                    Quiz.revision_quiz_id
+                    == attempt.revision_quiz_id,
+                    Quiz.quiz_type == "revision",
+                    Course.user_id == user_id
+                )
+                .all()
+            )
+
+            if not quiz_rows:
+                continue
+
+            answers = (
+                db.query(RevisionQuizAnswer)
+                .filter(
+                    RevisionQuizAnswer.attempt_id
+                    == attempt.attempt_id
+                )
+                .all()
+            )
+
+            answer_map = {
+                answer.quiz_id: answer.selected_answer
+                for answer in answers
+            }
+
+            total_questions = 0
+            correct_answers = 0
+
+            for quiz, lesson, course in quiz_rows:
+                selected_answer = answer_map.get(
+                    quiz.quiz_id
+                )
+
+                if selected_answer is None:
+                    continue
+
+                total_questions += 1
+
+                if (
+                    selected_answer.strip().upper()
+                    == quiz.correct_answer.strip().upper()
+                ):
+                    correct_answers += 1
+
+            score = (
+                (correct_answers / total_questions) * 100
+                if total_questions > 0
+                else 0
+            )
+
+            course = quiz_rows[0][2]
+
+            history.append({
+                "attempt_id": attempt.attempt_id,
+                "revision_quiz_id": (
+                    attempt.revision_quiz_id
+                ),
+                "course_id": course.course_id,
+                "course_title": course.title,
+                "attempted_at": (
+                    attempt.attempted_at.isoformat()
+                    if attempt.attempted_at
+                    else None
+                ),
+                "total_questions": total_questions,
+                "correct_answers": correct_answers,
+                "incorrect_answers": (
+                    total_questions - correct_answers
+                ),
+                "score": round(score, 2)
+            })
+
+        return {
+            "history": history,
+            "status_code": 200
+        }
+
+    except Exception as error:
+        return {
+            "message": "Unable to load revision quiz history.",
+            "error": str(error),
+            "status_code": 500
+        }
+
+    finally:
+        db.close()
+
+
+def get_revision_quiz_attempt(
+    user_id,
+    attempt_id
+):
+    db = SessionLocal()
+
+    try:
+        attempt = (
+            db.query(RevisionQuizAttempt)
+            .filter(
+                RevisionQuizAttempt.attempt_id
+                == attempt_id,
+                RevisionQuizAttempt.user_id
+                == user_id
+            )
+            .first()
+        )
+
+        if attempt is None:
+            return {
+                "message": "Revision quiz attempt not found.",
+                "status_code": 404
+            }
+
+        rows = (
+            db.query(
+                RevisionQuizAnswer,
+                Quiz,
+                KnowledgeNode,
+                Lesson,
+                Course
+            )
+            .join(
+                Quiz,
+                RevisionQuizAnswer.quiz_id
+                == Quiz.quiz_id
+            )
+            .join(
+                KnowledgeNode,
+                Quiz.knowledge_node_id
+                == KnowledgeNode.node_id
+            )
+            .join(
+                Lesson,
+                Quiz.lesson_id
+                == Lesson.lesson_id
+            )
+            .join(
+                Course,
+                Lesson.course_id
+                == Course.course_id
+            )
+            .filter(
+                RevisionQuizAnswer.attempt_id
+                == attempt_id,
+                Quiz.revision_quiz_id
+                == attempt.revision_quiz_id,
+                Quiz.quiz_type == "revision",
+                Course.user_id == user_id
+            )
+            .order_by(
+                RevisionQuizAnswer.answer_id
+            )
+            .all()
+        )
+
+        if not rows:
+            return {
+                "message": "Revision quiz attempt details not found.",
+                "status_code": 404
+            }
+
+        course = rows[0][4]
+
+        results = []
+
+        for answer, quiz, knowledge_node, lesson, course in rows:
+            selected_answer = (
+                answer.selected_answer.strip().upper()
+            )
+
+            correct_answer = (
+                quiz.correct_answer.strip().upper()
+            )
+
+            correct = (
+                selected_answer == correct_answer
+            )
+
+            results.append({
+                "quiz_id": quiz.quiz_id,
+                "question": quiz.question,
+                "concept_name": (
+                    knowledge_node.concept_name
+                ),
+                "selected_answer": selected_answer,
+                "correct_answer": correct_answer,
+                "correct": correct,
+                "explanation": quiz.explanation
+            })
+
+        total_questions = len(results)
+
+        correct_answers = sum(
+            1
+            for result in results
+            if result["correct"]
+        )
+
+        score = (
+            (correct_answers / total_questions) * 100
+            if total_questions > 0
+            else 0
+        )
+
+        return {
+            "attempt_id": attempt.attempt_id,
+            "revision_quiz_id": (
+                attempt.revision_quiz_id
+            ),
+            "course_id": course.course_id,
+            "course_title": course.title,
+            "attempted_at": (
+                attempt.attempted_at.isoformat()
+                if attempt.attempted_at
+                else None
+            ),
+            "total_questions": total_questions,
+            "correct_answers": correct_answers,
+            "incorrect_answers": (
+                total_questions - correct_answers
+            ),
+            "score": round(score, 2),
+            "results": results,
+            "status_code": 200
+        }
+
+    except Exception as error:
+        return {
+            "message": (
+                "Unable to load revision quiz attempt."
+            ),
             "error": str(error),
             "status_code": 500
         }

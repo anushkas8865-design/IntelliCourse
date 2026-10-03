@@ -27,6 +27,11 @@ class Quiz(Base):
         nullable=False,
     )
 
+    revision_quiz_id: Mapped[str | None] = mapped_column(
+        String(36),
+        nullable=True,
+    )
+
     quiz_type: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

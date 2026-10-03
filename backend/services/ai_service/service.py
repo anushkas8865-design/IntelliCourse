@@ -760,6 +760,7 @@ def build_revision_quiz_prompt(
             {
                 "concept_name": concept["concept_name"],
                 "description": concept["description"],
+                "difficulty": concept["difficulty"],
             }
         )
 
@@ -774,6 +775,9 @@ that the learner is due to revise.
 Course ID: {course_id}
 Course Title: {course_title}
 Number of Questions: {number_of_questions}
+
+Each concept has an adaptive target difficulty determined
+by the learning system.
 
 Concepts currently due for revision:
 {json.dumps(concept_information, indent=2)}
@@ -804,22 +808,27 @@ Requirements:
 3. Every question must test one of the provided revision concepts.
 4. Each question must be associated with exactly one concept.
 5. The concept_name must exactly match one of the provided concept names.
-6. Questions should focus on recalling and understanding previously learned concepts.
-7. Questions should help reinforce the learner's understanding of the concept.
-8. Do not introduce concepts that are not in the provided list.
-9. Each question must have exactly four options.
-10. The options must use option_a, option_b, option_c, and option_d.
-11. The correct_answer must contain only one of: A, B, C, or D.
-12. The correct answer must actually match one of the four options.
-13. Provide a clear explanation for the correct answer.
-14. Avoid ambiguous questions.
-15. Avoid duplicate questions. If a concept has multiple questions, each question must be meaningfully different.
-16. Questions should be appropriate for revision practice.
-17. Do not include markdown or code fences.
-18. Do not include fields outside the requested JSON structure.
-19. Do not calculate or invent unrelated information.
+6. Use the difficulty provided for each concept when generating its question.
+7. Beginner questions should focus on fundamental understanding, definitions, recognition, and straightforward application.
+8. Intermediate questions should require understanding, comparison, interpretation, or practical application.
+9. Advanced questions should require deeper reasoning, analysis, evaluation, or more complex application.
+10. Do not make an Advanced question merely longer; its reasoning should actually be more demanding.
+11. Do not make a Beginner question unnecessarily complex.
+12. Questions should focus on recalling and understanding previously learned concepts.
+13. Questions should help reinforce the learner's understanding of the concept.
+14. Do not introduce concepts that are not in the provided list.
+15. Each question must have exactly four options.
+16. The options must use option_a, option_b, option_c, and option_d.
+17. The correct_answer must contain only one of: A, B, C, or D.
+18. The correct answer must actually match one of the four options.
+19. Provide a clear explanation for the correct answer.
+20. Avoid ambiguous questions.
+21. Avoid duplicate questions. If a concept has multiple questions, each question must be meaningfully different.
+22. Questions should be appropriate for revision practice.
+23. Do not include markdown or code fences.
+24. Do not include fields outside the requested JSON structure.
+25. Do not calculate or invent unrelated information.
 """
-
 
 def generate_revision_quiz_with_ai(
     course_id,
@@ -871,18 +880,71 @@ def generate_development_revision_quiz(
         ]
 
         concept_name = concept["concept_name"]
+        difficulty = concept.get(
+            "difficulty",
+            "Intermediate"
+        )
+
+        if difficulty == "Beginner":
+            question = (
+                f"Revision check {question_number + 1}: "
+                f"Which statement best describes "
+                f"the basic idea of {concept_name}?"
+            )
+
+            option_a = (
+                f"{concept_name} is a fundamental concept "
+                f"covered in the course."
+            )
+
+            explanation = (
+                f"This Beginner-level revision question "
+                f"checks the fundamental understanding of "
+                f"{concept_name}."
+            )
+
+        elif difficulty == "Advanced":
+            question = (
+                f"Revision check {question_number + 1}: "
+                f"Which explanation best accounts for how "
+                f"{concept_name} should be applied in a "
+                f"more complex situation?"
+            )
+
+            option_a = (
+                f"{concept_name} should be analyzed using "
+                f"its underlying principles and applied "
+                f"appropriately to the situation."
+            )
+
+            explanation = (
+                f"This Advanced-level revision question "
+                f"requires deeper reasoning about "
+                f"{concept_name}."
+            )
+
+        else:
+            question = (
+                f"Revision check {question_number + 1}: "
+                f"Which situation best demonstrates the "
+                f"application of {concept_name}?"
+            )
+
+            option_a = (
+                f"Applying the principles of {concept_name} "
+                f"to an appropriate practical situation."
+            )
+
+            explanation = (
+                f"This Intermediate-level revision question "
+                f"checks the learner's ability to apply "
+                f"{concept_name}."
+            )
 
         questions.append(
             {
-                "question": (
-                    f"Revision check {question_number + 1}: "
-                    f"Which statement best helps review "
-                    f"the concept {concept_name}?"
-                ),
-                "option_a": (
-                    f"{concept_name} is a concept covered "
-                    f"in the course."
-                ),
+                "question": question,
+                "option_a": option_a,
                 "option_b": (
                     "It is unrelated to the course."
                 ),
@@ -893,11 +955,7 @@ def generate_development_revision_quiz(
                     "It has no educational relevance."
                 ),
                 "correct_answer": "A",
-                "explanation": (
-                    f"{concept_name} is one of the concepts "
-                    f"covered in the course and is currently "
-                    f"due for revision."
-                ),
+                "explanation": explanation,
                 "concept_name": concept_name,
             }
         )
@@ -932,7 +990,6 @@ def generate_development_revision_quiz(
     return {
         "questions": questions
     }
-
 
 def generate_gemini_revision_quiz(
     course_id,

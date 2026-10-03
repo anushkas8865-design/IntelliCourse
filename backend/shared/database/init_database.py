@@ -13,6 +13,8 @@ from shared.models.knowledge_node import KnowledgeNode
 from shared.models.knowledge_relationship import KnowledgeRelationship
 from shared.models.concept_learning_history import ConceptLearningHistory
 from shared.models.concept_retention_state import ConceptRetentionState
+from shared.models.revision_quiz_attempt import RevisionQuizAttempt
+from shared.models.revision_quiz_answer import RevisionQuizAnswer
 
 
 def initialize_database():

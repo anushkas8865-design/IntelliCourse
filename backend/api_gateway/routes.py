@@ -317,6 +317,51 @@ def generate_revision_quiz():
 
     return jsonify(result), status_code
 
+@gateway_routes.route(
+    "/api/quiz/revision/history",
+    methods=["GET"]
+)
+def get_revision_quiz_history():
+    authorization = request.headers.get(
+        "Authorization"
+    )
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
+    result, status_code = forward_lesson_request(
+        method="GET",
+        path="/api/quiz/revision/history",
+        authorization=authorization
+    )
+
+    return jsonify(result), status_code
+
+
+@gateway_routes.route(
+    "/api/quiz/revision/history/<attempt_id>",
+    methods=["GET"]
+)
+def get_revision_quiz_attempt(attempt_id):
+    authorization = request.headers.get(
+        "Authorization"
+    )
+
+    if not authorization:
+        return jsonify({
+            "message": "Authorization header is required."
+        }), 401
+
+    result, status_code = forward_lesson_request(
+        method="GET",
+        path=f"/api/quiz/revision/history/{attempt_id}",
+        authorization=authorization
+    )
+
+    return jsonify(result), status_code
+
 
 # =============================================================
 # EVALUATE QUIZ ROUTE

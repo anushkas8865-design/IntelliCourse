@@ -1,33 +1,115 @@
 .revision-page {
+  width: 100vw;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
   background: #f8f9fd;
   color: #172554;
-  padding: 32px;
   box-sizing: border-box;
 }
 
-.revision-container {
-  max-width: 1100px;
-  margin: 0 auto;
+/* =========================================================
+   SIDEBAR
+   Matches Dashboard.css
+========================================================= */
+
+.sidebar {
+  width: 250px;
+  min-height: 100vh;
+  background: #ffffff;
+  border-right: 1px solid #e7eaf2;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
 }
 
-.revision-back-button {
+.brand {
+  height: 76px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #eef0f5;
+  font-size: 18px;
+  font-weight: 700;
+  color: #172554;
+  box-sizing: border-box;
+}
+
+.brand-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: linear-gradient(
+    135deg,
+    #6845f5,
+    #4c35d9
+  );
+  font-size: 17px;
+}
+
+.sidebar-nav {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nav-item {
+  width: 100%;
+  padding: 13px 14px;
   border: none;
+  border-radius: 10px;
   background: transparent;
-  color: #5b3eea;
-  font-size: 13px;
-  font-weight: 600;
+  color: #34415f;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
-  padding: 5px 0;
+  box-sizing: border-box;
 }
 
-.revision-back-button:hover {
-  color: #4327c9;
+.nav-item span {
+  width: 20px;
+  text-align: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.nav-item:hover {
+  background: #f4f1ff;
+  color: #5b3eea;
+}
+
+.nav-item.active {
+  background: #eee9ff;
+  color: #5638e6;
+  font-weight: 600;
+}
+
+/* =========================================================
+   MAIN CONTENT
+========================================================= */
+
+.revision-main {
+  flex: 1;
+  min-width: 0;
+  width: calc(100% - 250px);
+  padding: 42px 34px 60px;
+  box-sizing: border-box;
 }
 
 .revision-header {
-  margin-top: 28px;
-  margin-bottom: 28px;
+  max-width: 1100px;
+  margin: 0 auto 28px;
 }
 
 .revision-label {
@@ -50,7 +132,13 @@
   font-size: 14px;
 }
 
+/* =========================================================
+   CARDS
+========================================================= */
+
 .revision-card {
+  max-width: 1100px;
+  margin: 0 auto 18px;
   background: #ffffff;
   border: 1px solid #e5e8f0;
   border-radius: 13px;
@@ -73,7 +161,67 @@
   margin: 5px 0 0;
   color: #71809d;
   font-size: 13px;
+  line-height: 1.6;
 }
+
+/* =========================================================
+   REVISION ITEMS
+========================================================= */
+
+.revision-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.revision-item {
+  min-height: 105px;
+  border: 1px solid #e5e8f0;
+  border-radius: 11px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+.revision-item-content {
+  min-width: 0;
+}
+
+.revision-item-label {
+  color: #5b3eea;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.revision-item h3 {
+  margin: 7px 0 6px;
+  color: #172554;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.revision-item p {
+  margin: 4px 0;
+  color: #71809d;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.revision-attempt-date {
+  display: inline-block;
+  margin-top: 5px;
+  color: #8793aa;
+  font-size: 12px;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
 
 .revision-empty {
   border: 1px dashed #d9ddea;
@@ -96,11 +244,141 @@
   line-height: 1.6;
 }
 
-@media (max-width: 600px) {
+/* =========================================================
+   ERROR
+========================================================= */
+
+.revision-error {
+  max-width: 1100px;
+  margin: 0 auto 18px;
+  padding: 16px 18px;
+  border: 1px solid #f1c7cc;
+  border-radius: 11px;
+  background: #fff5f6;
+  box-sizing: border-box;
+}
+
+.revision-error h3 {
+  margin: 0 0 5px;
+  color: #a32d3b;
+  font-size: 15px;
+}
+
+.revision-error p {
+  margin: 0;
+  color: #8c4a52;
+  font-size: 13px;
+}
+
+/* =========================================================
+   RESULT SUMMARY
+========================================================= */
+
+.revision-result-summary {
+  border: 1px solid #e5e8f0;
+  border-radius: 11px;
+  padding: 20px;
+  margin-bottom: 22px;
+  background: #fafaff;
+}
+
+.revision-result-summary h3 {
+  margin: 0 0 8px;
+  color: #5b3eea;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.revision-result-summary p {
+  margin: 5px 0;
+  color: #60708e;
+  font-size: 13px;
+}
+
+/* =========================================================
+   DETAILED REVIEW
+========================================================= */
+
+.revision-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.revision-review-question {
+  border: 1px solid #e5e8f0;
+  border-radius: 11px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.revision-review-question h3 {
+  margin: 0 0 15px;
+  color: #172554;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.revision-review-question p {
+  margin: 7px 0;
+  color: #60708e;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.revision-result-correct {
+  color: #198754 !important;
+}
+
+.revision-result-incorrect {
+  color: #dc3545 !important;
+}
+
+.revision-review-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 700px) {
   .revision-page {
-    padding: 22px 18px;
+    display: block;
+    width: 100%;
   }
 
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+  }
+
+  .brand {
+    height: 76px;
+  }
+
+  .sidebar-nav {
+    padding: 16px;
+  }
+
+  .revision-main {
+    width: 100%;
+    padding: 28px 18px 40px;
+  }
+
+  .revision-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .revision-item .lesson-primary-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
   .revision-header h1 {
     font-size: 24px;
   }

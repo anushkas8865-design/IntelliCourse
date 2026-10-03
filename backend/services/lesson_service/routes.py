@@ -15,6 +15,8 @@ from services.lesson_service.service import (
     generate_coding_challenge,
     get_lesson_by_id,
     get_videos_by_lesson_id,
+    get_revision_quiz_history,
+    get_revision_quiz_attempt,
 )
 
 
@@ -166,6 +168,47 @@ def create_revision_quiz():
     )
 
     status_code = result.pop("status_code", 200)
+
+    return jsonify(result), status_code
+
+
+@lesson_routes.route(
+    "/api/quiz/revision/history",
+    methods=["GET"]
+)
+@jwt_required()
+def get_revision_history():
+    user_id = get_jwt_identity()
+
+    result = get_revision_quiz_history(
+        user_id=user_id
+    )
+
+    status_code = result.pop(
+        "status_code",
+        200
+    )
+
+    return jsonify(result), status_code
+
+
+@lesson_routes.route(
+    "/api/quiz/revision/history/<attempt_id>",
+    methods=["GET"]
+)
+@jwt_required()
+def get_revision_attempt(attempt_id):
+    user_id = get_jwt_identity()
+
+    result = get_revision_quiz_attempt(
+        user_id=user_id,
+        attempt_id=attempt_id
+    )
+
+    status_code = result.pop(
+        "status_code",
+        200
+    )
 
     return jsonify(result), status_code
 
