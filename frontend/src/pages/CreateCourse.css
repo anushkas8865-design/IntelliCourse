@@ -115,3 +115,35 @@
     font-size: 27px;
   }
 }
+.create-course-page {
+  min-height: 100vh;
+  background: #f7f8fc;
+  padding: 0;
+  color: #172554;
+  display: flex;
+}
+
+.create-course-main {
+  flex: 1;
+  min-width: 0;
+  padding: 40px;
+}
+
+.create-course-container {
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+  .create-course-main {
+    padding: 24px 18px;
+  }
+
+  .create-course-card {
+    padding: 22px;
+  }
+
+  .create-course-header h1 {
+    font-size: 27px;
+  }
+}

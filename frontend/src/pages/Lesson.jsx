@@ -261,6 +261,17 @@ function Lesson() {
     }
   }
 
+  function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId)
+
+    if (section) {
+      section.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="lesson-page">
@@ -316,324 +327,383 @@ function Lesson() {
 
   return (
     <div className="lesson-page">
-      <div className="lesson-container">
-        <BackButton />
+      <aside className="lesson-sidebar">
+        <div className="lesson-sidebar-brand">
+          <div className="lesson-sidebar-brand-icon">◆</div>
+          <span>AI Course Builder</span>
+        </div>
 
-        <section className="lesson-header">
-          <span className="lesson-label">
-            LESSON {lesson.sequence_number}
-          </span>
+        <nav className="lesson-sidebar-nav">
+          <button
+            type="button"
+            className="lesson-sidebar-item"
+            onClick={() => scrollToSection('lesson-content')}
+          >
+            <span>▣</span>
+            Lesson Content
+          </button>
 
-          <h1>{lesson.title || 'Untitled Lesson'}</h1>
+          <button
+            type="button"
+            className="lesson-sidebar-item"
+            onClick={() => scrollToSection('recommended-videos')}
+          >
+            <span>▶</span>
+            Recommended Videos
+          </button>
 
-          <p>
-            {lesson.summary || 'No lesson summary available.'}
-          </p>
-        </section>
+          <button
+            type="button"
+            className="lesson-sidebar-item"
+            onClick={() => scrollToSection('lesson-quiz')}
+          >
+            <span>?</span>
+            Quiz
+          </button>
 
-        <section className="lesson-card">
-          <div className="lesson-section-heading">
-            <h2>Lesson Content</h2>
-            <p>Study the lesson material below.</p>
-          </div>
+          <button
+            type="button"
+            className="lesson-sidebar-item"
+            onClick={() => scrollToSection('coding-challenge')}
+          >
+            <span>⌘</span>
+            Coding Challenge
+          </button>
+        </nav>
+      </aside>
 
-          <div className="lesson-content">
-            {lesson.content ? (
-              lesson.content.split('\n').map((line, index) => (
-                <p key={index}>
-                  {line || '\u00A0'}
-                </p>
-              ))
-            ) : (
-              <p>No lesson content is available.</p>
-            )}
-          </div>
-        </section>
+      <main className="lesson-main">
+        <div className="lesson-container">
+          <BackButton />
 
-        <section className="lesson-card">
-          <div className="lesson-section-heading">
-            <h2>Recommended Videos</h2>
+          <section className="lesson-header">
+            <span className="lesson-label">
+              LESSON {lesson.sequence_number}
+            </span>
+
+            <h1>{lesson.title || 'Untitled Lesson'}</h1>
+
             <p>
-              Additional YouTube resources related to this lesson.
+              {lesson.summary || 'No lesson summary available.'}
             </p>
-          </div>
+          </section>
 
-          {videos.length === 0 ? (
-            <div className="lesson-empty">
-              <p>No YouTube videos are available for this lesson.</p>
+          <section
+            id="lesson-content"
+            className="lesson-card lesson-section"
+          >
+            <div className="lesson-section-heading">
+              <h2>Lesson Content</h2>
+              <p>Study the lesson material below.</p>
             </div>
-          ) : (
-            <div className="lesson-videos">
-              {videos.map((video) => (
-                <a
-                  key={video.video_id}
-                  href={video.youtube_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="lesson-video-card"
-                >
-                  <div className="lesson-video-icon">
-                    ▶
-                  </div>
 
-                  <div className="lesson-video-info">
-                    <h3>{video.title || 'YouTube Lesson Video'}</h3>
-                    <span>Watch on YouTube →</span>
-                  </div>
-                </a>
-              ))}
+            <div className="lesson-content">
+              {lesson.content ? (
+                lesson.content.split('\n').map((line, index) => (
+                  <p key={index}>
+                    {line || '\u00A0'}
+                  </p>
+                ))
+              ) : (
+                <p>No lesson content is available.</p>
+              )}
             </div>
-          )}
-        </section>
+          </section>
 
-        <section className="lesson-card">
-          <div className="lesson-section-heading">
-            <h2>Quiz</h2>
-            <p>
-              Test your understanding of this lesson.
-            </p>
-          </div>
-
-          {!quiz ? (
-            <div className="quiz-start">
+          <section
+            id="recommended-videos"
+            className="lesson-card lesson-section"
+          >
+            <div className="lesson-section-heading">
+              <h2>Recommended Videos</h2>
               <p>
-                Generate a short quiz to check your understanding.
+                Additional YouTube resources related to this lesson.
               </p>
-
-              <button
-                type="button"
-                className="lesson-primary-button"
-                onClick={generateQuiz}
-                disabled={quizLoading}
-              >
-                {quizLoading
-                  ? 'Generating Quiz...'
-                  : 'Generate Quiz'}
-              </button>
             </div>
-          ) : quizResult ? (
-            <div className="quiz-result">
-              <div className="quiz-score">
-                <span>QUIZ SCORE</span>
-                <strong>{quizResult.score}%</strong>
-              </div>
 
-              <div className="quiz-result-summary">
-                <p>
-                  You answered{' '}
-                  <strong>{quizResult.correct_answers}</strong> out of{' '}
-                  <strong>{quizResult.total_questions}</strong>{' '}
-                  questions correctly.
-                </p>
+            {videos.length === 0 ? (
+              <div className="lesson-empty">
+                <p>No YouTube videos are available for this lesson.</p>
               </div>
-
-              <div className="quiz-results-list">
-                {quizResult.results?.map((result, index) => (
-                  <div
-                    key={result.quiz_id}
-                    className={`quiz-result-item ${
-                      result.correct
-                        ? 'quiz-result-correct'
-                        : 'quiz-result-incorrect'
-                    }`}
+            ) : (
+              <div className="lesson-videos">
+                {videos.map((video) => (
+                  <a
+                    key={video.video_id}
+                    href={video.youtube_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="lesson-video-card"
                   >
-                    <div className="quiz-result-question">
-                      <span>Question {index + 1}</span>
-                      <strong>
-                        {result.correct ? 'Correct' : 'Incorrect'}
-                      </strong>
+                    <div className="lesson-video-icon">
+                      ▶
                     </div>
 
-                    <p>{quiz.questions[index]?.question}</p>
-
-                    <p>
-                      Your answer:{' '}
-                      <strong>{result.selected_answer}</strong>
-                    </p>
-
-                    {!result.correct && (
-                      <p>
-                        Correct answer:{' '}
-                        <strong>{result.correct_answer}</strong>
-                      </p>
-                    )}
-
-                    <p className="quiz-explanation">
-                      {result.explanation ||
-                        'No explanation available.'}
-                    </p>
-                  </div>
+                    <div className="lesson-video-info">
+                      <h3>{video.title || 'YouTube Lesson Video'}</h3>
+                      <span>Watch on YouTube →</span>
+                    </div>
+                  </a>
                 ))}
               </div>
+            )}
+          </section>
 
-              <button
-                type="button"
-                className="lesson-primary-button"
-                onClick={generateQuiz}
-                disabled={quizLoading}
-              >
-                {quizLoading
-                  ? 'Generating Quiz...'
-                  : 'Try Another Quiz'}
-              </button>
-            </div>
-          ) : (
-            <div className="quiz-content">
-              {quiz.questions?.map((question, index) => (
-                <div
-                  key={question.quiz_id}
-                  className="quiz-question"
-                >
-                  <h3>
-                    {index + 1}. {question.question}
-                  </h3>
-
-                  <div className="quiz-options">
-                    {[
-                      ['A', question.option_a],
-                      ['B', question.option_b],
-                      ['C', question.option_c],
-                      ['D', question.option_d],
-                    ].map(([letter, option]) => (
-                      <button
-                        key={letter}
-                        type="button"
-                        className={`quiz-option ${
-                          quizAnswers[question.quiz_id] === letter
-                            ? 'quiz-option-selected'
-                            : ''
-                        }`}
-                        onClick={() =>
-                          handleQuizAnswer(
-                            question.quiz_id,
-                            letter
-                          )
-                        }
-                        disabled={quizSubmitting}
-                      >
-                        <span className="quiz-option-letter">
-                          {letter}
-                        </span>
-
-                        <span>{option}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                className="lesson-primary-button quiz-submit-button"
-                onClick={submitQuiz}
-                disabled={quizSubmitting}
-              >
-                {quizSubmitting
-                  ? 'Submitting Quiz...'
-                  : 'Submit Quiz'}
-              </button>
-            </div>
-          )}
-
-          {quizError && (
-            <p className="quiz-error">
-              {quizError}
-            </p>
-          )}
-        </section>
-
-        <section className="lesson-card">
-          <div className="lesson-section-heading">
-            <h2>Coding Challenge</h2>
-            <p>
-              Practice your programming skills with an AI-generated
-              challenge.
-            </p>
-          </div>
-
-          {!challenge ? (
-            <div className="challenge-start">
+          <section
+            id="lesson-quiz"
+            className="lesson-card lesson-section"
+          >
+            <div className="lesson-section-heading">
+              <h2>Quiz</h2>
               <p>
-                Coding challenges are available for programming
-                courses.
+                Test your understanding of this lesson.
               </p>
+            </div>
 
+            {!quiz ? (
+              <div className="quiz-start">
+                <p>
+                  Generate a short quiz to check your understanding.
+                </p>
+
+                <button
+                  type="button"
+                  className="lesson-primary-button"
+                  onClick={generateQuiz}
+                  disabled={quizLoading}
+                >
+                  {quizLoading
+                    ? 'Generating Quiz...'
+                    : 'Generate Quiz'}
+                </button>
+              </div>
+            ) : quizResult ? (
+              <div className="quiz-result">
+                <div className="quiz-score">
+                  <span>QUIZ SCORE</span>
+                  <strong>{quizResult.score}%</strong>
+                </div>
+
+                <div className="quiz-result-summary">
+                  <p>
+                    You answered{' '}
+                    <strong>{quizResult.correct_answers}</strong> out of{' '}
+                    <strong>{quizResult.total_questions}</strong>{' '}
+                    questions correctly.
+                  </p>
+                </div>
+
+                <div className="quiz-results-list">
+                  {quizResult.results?.map((result, index) => (
+                    <div
+                      key={result.quiz_id}
+                      className={`quiz-result-item ${
+                        result.correct
+                          ? 'quiz-result-correct'
+                          : 'quiz-result-incorrect'
+                      }`}
+                    >
+                      <div className="quiz-result-question">
+                        <span>Question {index + 1}</span>
+                        <strong>
+                          {result.correct ? 'Correct' : 'Incorrect'}
+                        </strong>
+                      </div>
+
+                      <p>{quiz.questions[index]?.question}</p>
+
+                      <p>
+                        Your answer:{' '}
+                        <strong>{result.selected_answer}</strong>
+                      </p>
+
+                      {!result.correct && (
+                        <p>
+                          Correct answer:{' '}
+                          <strong>{result.correct_answer}</strong>
+                        </p>
+                      )}
+
+                      <p className="quiz-explanation">
+                        {result.explanation ||
+                          'No explanation available.'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="lesson-primary-button"
+                  onClick={generateQuiz}
+                  disabled={quizLoading}
+                >
+                  {quizLoading
+                    ? 'Generating Quiz...'
+                    : 'Try Another Quiz'}
+                </button>
+              </div>
+            ) : (
+              <div className="quiz-content">
+                {quiz.questions?.map((question, index) => (
+                  <div
+                    key={question.quiz_id}
+                    className="quiz-question"
+                  >
+                    <h3>
+                      {index + 1}. {question.question}
+                    </h3>
+
+                    <div className="quiz-options">
+                      {[
+                        ['A', question.option_a],
+                        ['B', question.option_b],
+                        ['C', question.option_c],
+                        ['D', question.option_d],
+                      ].map(([letter, option]) => (
+                        <button
+                          key={letter}
+                          type="button"
+                          className={`quiz-option ${
+                            quizAnswers[question.quiz_id] === letter
+                              ? 'quiz-option-selected'
+                              : ''
+                          }`}
+                          onClick={() =>
+                            handleQuizAnswer(
+                              question.quiz_id,
+                              letter
+                            )
+                          }
+                          disabled={quizSubmitting}
+                        >
+                          <span className="quiz-option-letter">
+                            {letter}
+                          </span>
+
+                          <span>{option}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="lesson-primary-button quiz-submit-button"
+                  onClick={submitQuiz}
+                  disabled={quizSubmitting}
+                >
+                  {quizSubmitting
+                    ? 'Submitting Quiz...'
+                    : 'Submit Quiz'}
+                </button>
+              </div>
+            )}
+
+            {quizError && (
+              <p className="quiz-error">
+                {quizError}
+              </p>
+            )}
+          </section>
+
+          <section
+            id="coding-challenge"
+            className="lesson-card lesson-section"
+          >
+            <div className="lesson-section-heading">
+              <h2>Coding Challenge</h2>
+              <p>
+                Practice your programming skills with an AI-generated
+                challenge.
+              </p>
+            </div>
+
+            {!challenge ? (
+              <div className="challenge-start">
+                <p>
+                  Coding challenges are available for programming
+                  courses.
+                </p>
+
+                <button
+                  type="button"
+                  className="lesson-primary-button"
+                  onClick={generateCodingChallenge}
+                  disabled={challengeLoading}
+                >
+                  {challengeLoading
+                    ? 'Generating Challenge...'
+                    : 'Generate Coding Challenge'}
+                </button>
+
+                {challengeError && (
+                  <p className="challenge-error">
+                    {challengeError}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="coding-challenge">
+                <div className="challenge-header">
+                  <div>
+                    <span className="challenge-label">
+                      CODING CHALLENGE
+                    </span>
+
+                    <h3>
+                      {challenge.title || 'Coding Challenge'}
+                    </h3>
+                  </div>
+
+                  <span className="challenge-difficulty">
+                    {challenge.difficulty || 'Not specified'}
+                  </span>
+                </div>
+
+                <div className="challenge-description">
+                  <p>
+                    {challenge.description ||
+                      'No challenge description available.'}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="lesson-completion-card">
+            <div>
+              <h2>Lesson Complete?</h2>
+              <p>
+                Mark this lesson as complete after you finish studying
+                it.
+              </p>
+            </div>
+
+            <div>
               <button
                 type="button"
-                className="lesson-primary-button"
-                onClick={generateCodingChallenge}
-                disabled={challengeLoading}
+                className="lesson-complete-button"
+                onClick={markLessonComplete}
+                disabled={lessonCompleted || completeLoading}
               >
-                {challengeLoading
-                  ? 'Generating Challenge...'
-                  : 'Generate Coding Challenge'}
+                {lessonCompleted
+                  ? '✓ Lesson Completed'
+                  : completeLoading
+                    ? 'Updating Progress...'
+                    : 'Mark Lesson Complete'}
               </button>
 
-              {challengeError && (
+              {completeError && (
                 <p className="challenge-error">
-                  {challengeError}
+                  {completeError}
                 </p>
               )}
             </div>
-          ) : (
-            <div className="coding-challenge">
-              <div className="challenge-header">
-                <div>
-                  <span className="challenge-label">
-                    CODING CHALLENGE
-                  </span>
-
-                  <h3>
-                    {challenge.title || 'Coding Challenge'}
-                  </h3>
-                </div>
-
-                <span className="challenge-difficulty">
-                  {challenge.difficulty || 'Not specified'}
-                </span>
-              </div>
-
-              <div className="challenge-description">
-                <p>
-                  {challenge.description ||
-                    'No challenge description available.'}
-                </p>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <section className="lesson-completion-card">
-          <div>
-            <h2>Lesson Complete?</h2>
-            <p>
-              Mark this lesson as complete after you finish studying
-              it.
-            </p>
-          </div>
-
-          <div>
-            <button
-              type="button"
-              className="lesson-complete-button"
-              onClick={markLessonComplete}
-              disabled={lessonCompleted || completeLoading}
-            >
-              {lessonCompleted
-                ? '✓ Lesson Completed'
-                : completeLoading
-                  ? 'Updating Progress...'
-                  : 'Mark Lesson Complete'}
-            </button>
-
-            {completeError && (
-              <p className="challenge-error">
-                {completeError}
-              </p>
-            )}
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
+      </main>
     </div>
   )
 }

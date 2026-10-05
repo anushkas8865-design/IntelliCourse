@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import BackButton from '../components/BackButton'
 import { apiRequest } from '../api/api'
 import { useAuth } from '../context/AuthContext'
+import './Dashboard.css'
 import './CreateCourse.css'
 
 function CreateCourse() {
@@ -59,81 +60,143 @@ function CreateCourse() {
 
   return (
     <div className="create-course-page">
-      <div className="create-course-container">
-        <BackButton />
-
-        <div className="create-course-header">
-          <h1>Create Course</h1>
-          <p>
-            Build a personalized course using AI-powered course generation.
-          </p>
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-icon">◆</div>
+          <span>AI Course Builder</span>
         </div>
 
-        <div className="create-course-card">
-          <div className="create-course-form">
-            <div className="create-course-field">
-              <label htmlFor="course-topic">Course Topic</label>
-              <input
-                id="course-topic"
-                type="text"
-                placeholder="e.g. Python Programming"
-                value={topic}
-                onChange={(event) => setTopic(event.target.value)}
-                disabled={loading}
-              />
-            </div>
+        <nav className="sidebar-nav">
+          <button
+            className="nav-item"
+            onClick={() => navigate('/')}
+          >
+            <span>⌂</span>
+            Dashboard
+          </button>
 
-            <div className="create-course-field">
-              <label htmlFor="course-difficulty">Difficulty</label>
-              <select
-                id="course-difficulty"
-                value={difficulty}
-                onChange={(event) => setDifficulty(event.target.value)}
-                disabled={loading}
-              >
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-              </select>
-            </div>
+          <button
+            className="nav-item"
+            onClick={() => navigate('/courses')}
+          >
+            <span>▣</span>
+            My Courses
+          </button>
 
-            <div className="create-course-field">
-              <label htmlFor="course-duration">Duration</label>
-              <select
-                id="course-duration"
-                value={duration}
-                onChange={(event) => setDuration(event.target.value)}
-                disabled={loading}
-              >
-                <option value="2 weeks">2 weeks</option>
-                <option value="4 weeks">4 weeks</option>
-                <option value="6 weeks">6 weeks</option>
-                <option value="8 weeks">8 weeks</option>
-              </select>
-            </div>
+          <button
+            className="nav-item active"
+            onClick={() => navigate('/create-course')}
+          >
+            <span>✎</span>
+            Create Course
+          </button>
 
-            {error && (
-              <div className="create-course-error">
-                {error}
+          <button
+            className="nav-item"
+            onClick={() => navigate('/revision-quizzes')}
+          >
+            <span>↻</span>
+            Revision Quizzes
+          </button>
+
+          <button className="nav-item">
+            <span>✦</span>
+            AI Assistant
+          </button>
+
+          <button
+            className="nav-item"
+            onClick={() => navigate('/settings')}
+          >
+            <span>⚙</span>
+            Settings
+          </button>
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="sidebar-sparkle">✦</div>
+          <strong>Build your future with AI</strong>
+          <span>Learn. Create. Grow.</span>
+        </div>
+      </aside>
+
+      <main className="create-course-main">
+        <div className="create-course-container">
+          <BackButton />
+
+          <div className="create-course-header">
+            <h1>Create Course</h1>
+            <p>
+              Build a personalized course using AI-powered course generation.
+            </p>
+          </div>
+
+          <div className="create-course-card">
+            <div className="create-course-form">
+              <div className="create-course-field">
+                <label htmlFor="course-topic">Course Topic</label>
+                <input
+                  id="course-topic"
+                  type="text"
+                  placeholder="e.g. Python Programming"
+                  value={topic}
+                  onChange={(event) => setTopic(event.target.value)}
+                  disabled={loading}
+                />
               </div>
-            )}
 
-            <button
-              type="button"
-              className="create-course-submit"
-              onClick={handleGenerateCourse}
-              disabled={loading}
-            >
-              {loading ? 'Generating Course...' : 'Generate Course'}
-            </button>
-          </div>
+              <div className="create-course-field">
+                <label htmlFor="course-difficulty">Difficulty</label>
+                <select
+                  id="course-difficulty"
+                  value={difficulty}
+                  onChange={(event) => setDifficulty(event.target.value)}
+                  disabled={loading}
+                >
+                  <option value="Beginner">Beginner</option>
+                  <option value="Intermediate">Intermediate</option>
+                  <option value="Advanced">Advanced</option>
+                </select>
+              </div>
 
-          <div className="create-course-info">
-            Your course will be generated using the AI Course Builder
-            backend and saved to your learning dashboard.
+              <div className="create-course-field">
+                <label htmlFor="course-duration">Duration</label>
+                <select
+                  id="course-duration"
+                  value={duration}
+                  onChange={(event) => setDuration(event.target.value)}
+                  disabled={loading}
+                >
+                  <option value="2 weeks">2 weeks</option>
+                  <option value="4 weeks">4 weeks</option>
+                  <option value="6 weeks">6 weeks</option>
+                  <option value="8 weeks">8 weeks</option>
+                </select>
+              </div>
+
+              {error && (
+                <div className="create-course-error">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="button"
+                className="create-course-submit"
+                onClick={handleGenerateCourse}
+                disabled={loading}
+              >
+                {loading ? 'Generating Course...' : 'Generate Course'}
+              </button>
+            </div>
+
+            <div className="create-course-info">
+              Your course will be generated using the AI Course Builder
+              backend and saved to your learning dashboard.
+            </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

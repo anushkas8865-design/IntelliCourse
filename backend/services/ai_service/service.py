@@ -9,53 +9,233 @@ load_dotenv()
 
 def build_course_prompt(topic, difficulty, duration):
     return f"""
-You are an AI course-generation assistant.
+You are an expert instructional designer and educator.
 
-Generate a structured educational course based on the following requirements:
+Generate a complete, structured, and educational course on:
 
-Topic: {topic}
-Difficulty: {difficulty}
-Duration: {duration}
+Course Topic: {topic}
+Course Difficulty: {difficulty}
+Course Duration: {duration} hours
+
+The course must be coherent, logically ordered, and suitable for the specified difficulty level.
+
+COURSE REQUIREMENTS
+
+1. Generate a clear and meaningful course title based on the requested topic.
+
+2. Generate a concise course description explaining what the learner will learn.
+
+3. Generate appropriate learning outcomes.
+
+4. Generate a suitable number of lessons for the given course duration.
+
+5. Lessons must follow a logical learning sequence.
+
+6. Each lesson must have:
+   - title
+   - content
+   - summary
+   - sequence_number
+
+7. Lesson titles must be specific and meaningful.
+
+8. Lessons must collectively cover the important concepts required to understand the requested course topic.
+
+9. Avoid unnecessary repetition between lessons.
+
+10. Do not introduce concepts that are unrelated to the requested course topic.
+
+11. The course should progress logically from foundational concepts toward more advanced or practical concepts where appropriate.
+
+12. The generated content must be educational and useful for actual learning.
+
+13. Keep the overall course focused on the requested topic.
+
+LESSON CONTENT REQUIREMENTS
+
+14. The "content" field of every lesson must contain actual teaching material.
+
+15. Do NOT make the lesson content only a short description, summary, introduction, list of topics, or statement about what the learner will study.
+
+16. The content must explain the concepts that belong to that specific lesson.
+
+17. The learner should be able to learn the lesson from the "content" itself without the content merely telling them to study something elsewhere.
+
+18. Organize lesson content logically so that concepts are introduced and explained in a meaningful order.
+
+19. Use explanations, examples, applications, comparisons, procedures, or other teaching methods when they are naturally relevant to the subject.
+
+20. Important terminology should be explained when necessary for understanding.
+
+21. Do not add irrelevant information simply to make the lesson longer.
+
+22. The depth of each lesson should be appropriate for the lesson topic, course difficulty, and available course duration.
+
+LESSON-SPECIFIC TEACHING SCOPE
+
+23. Before writing each lesson's content, determine which concepts and subtopics specifically belong to that lesson based on:
+   - the overall course topic
+   - the lesson title
+   - the lesson's position in the course
+   - the requested difficulty level
+   - the other lessons in the course
+
+24. Teach the concepts that belong specifically to that lesson rather than giving a short overview of the entire course.
+
+25. Each lesson should contain enough explanation of its own concepts to make the lesson educationally meaningful.
+
+26. When a lesson contains multiple important concepts, explain those concepts individually and show their relationship when appropriate.
+
+27. Use examples where they improve understanding. Examples should be relevant to the concept being taught.
+
+28. For practical or technical subjects, include practical usage, step-by-step explanation, examples, or application where appropriate.
+
+29. For theoretical subjects, explain the meaning, purpose, characteristics, categories, relationships, and relevant examples where appropriate.
+
+30. Do not unnecessarily teach concepts that properly belong to later or separate lessons.
+
+31. Do not repeat large portions of another lesson merely to provide context.
+
+32. If a concept must be mentioned because it is required to understand the current lesson, provide only the amount of background necessary and keep the main teaching focused on the current lesson.
+
+COURSE COHERENCE
+
+33. The course must have a clear learning progression.
+
+34. Earlier lessons may provide foundations required by later lessons.
+
+35. Later lessons may build upon concepts introduced earlier.
+
+36. Do not make every lesson independently repeat the complete course topic.
+
+37. Avoid overlapping lesson content unless repetition is necessary for learning.
+
+38. Each lesson should have a clear teaching purpose within the overall course.
+
+CONTENT DEPTH BY DIFFICULTY
+
+For Beginner courses:
+
+- Start with foundational concepts.
+- Explain terminology clearly.
+- Assume limited prior knowledge.
+- Use simple explanations and examples.
+- Break difficult ideas into understandable steps.
+- Avoid assuming advanced background knowledge.
+
+For Intermediate courses:
+
+- Provide deeper explanations than a beginner course.
+- Explain important relationships between concepts.
+- Include practical examples and applications where appropriate.
+- Assume basic familiarity with the subject but still explain important concepts clearly.
+- Include relevant details that help the learner apply the concepts.
+
+For Advanced courses:
+
+- Provide technically deeper explanations.
+- Explore important relationships, edge cases, limitations, and practical considerations where relevant.
+- Use more complex examples or scenarios where appropriate.
+- Assume foundational knowledge but do not skip important reasoning required to understand the lesson.
+- Focus on deeper understanding and practical or industry-oriented considerations where appropriate.
+
+IMPORTANT LESSON QUALITY RULES
+
+The generated lesson content must be actual learning material.
+
+Do NOT generate content such as:
+
+"Study the lesson material below."
+
+"This lesson introduces the fundamental concepts of X."
+
+"This lesson covers the following topics."
+
+"Learn about X, Y, and Z."
+
+followed by little or no actual explanation.
+
+Instead, explain the concepts themselves.
+
+For example, if a lesson is about "Introduction to Pronouns", the content should actually explain what pronouns are, why they are used, relevant types or categories appropriate to the lesson, examples of their usage, and important usage considerations rather than only stating that the lesson introduces pronouns.
+
+Similarly, for a technical lesson, explain the actual technical concepts, how they work, relevant examples, and practical considerations instead of simply listing them.
+
+The content should be detailed enough to teach the intended lesson but should NOT be artificially lengthened with unrelated information.
+
+ADAPTIVE TEACHING
+
+The course difficulty is {difficulty}.
+
+Use this difficulty to determine:
+- explanation depth
+- terminology
+- examples
+- assumptions about prior knowledge
+- technical detail
+- practical complexity
+
+Do not change the requested course difficulty.
+
+The difficulty should affect how the concepts are taught, not which unrelated concepts are added.
+
+LESSON CONTENT SELF-CHECK
+
+Before returning the final JSON, internally verify each lesson:
+
+1. Does the content actually teach the lesson's subject?
+2. Does it explain the important concepts belonging to this lesson?
+3. Is the content focused on this specific lesson rather than the entire course?
+4. Are examples or applications included where they are naturally useful?
+5. Is the explanation depth appropriate for the requested difficulty?
+6. Is the content free from unnecessary filler?
+7. Could a learner understand the lesson from the content itself?
+8. Is the content different enough from other lessons to avoid unnecessary repetition?
+
+If the answer to any of these is no, improve the lesson content before returning the final response.
+
+OUTPUT FORMAT
 
 Return ONLY valid JSON.
 
-The JSON must contain exactly these top-level fields:
+Use exactly this structure:
 
 {{
-    "title": "string",
-    "description": "string",
-    "difficulty": "string",
-    "duration": "string",
-    "learning_outcomes": [
-        "string"
-    ],
-    "lessons": [
-        {{
-            "title": "string",
-            "content": "string",
-            "summary": "string",
-            "sequence_number": 1
-        }}
-    ]
+  "title": "Course title",
+  "description": "Course description",
+  "difficulty": "{difficulty}",
+  "duration": {duration},
+  "learning_outcomes": [
+    "Learning outcome 1",
+    "Learning outcome 2",
+    "Learning outcome 3"
+  ],
+  "lessons": [
+    {{
+      "title": "Lesson title",
+      "content": "Complete lesson teaching material",
+      "summary": "Concise summary of the lesson",
+      "sequence_number": 1
+    }}
+  ]
 }}
 
-Requirements:
+OUTPUT RULES
 
-1. The course must be appropriate for the requested topic.
-2. The difficulty must match the requested difficulty.
-3. The duration must match the requested duration.
-4. Learning outcomes must be clear and educational.
-5. Generate lessons that cover the requested topic in a logical learning sequence.
-6. Start with foundational concepts before advanced concepts.
-7. Each lesson must have a unique sequence_number starting from 1.
-8. Each lesson must contain meaningful educational content.
-9. Each lesson must contain a concise summary of that lesson.
-10. The lesson content should be suitable for the requested difficulty level.
-11. Do not include fields outside the requested JSON structure.
-12. Do not calculate or invent unrelated information.
-13. Do not include markdown or code fences.
+39. Do not include Markdown code fences around the JSON.
+
+40. Do not include explanations outside the JSON.
+
+41. Ensure all JSON is syntactically valid.
+
+42. Ensure every lesson contains all required fields.
+
+43. Ensure sequence_number starts at 1 and increases sequentially.
+
+44. Ensure the content field contains the actual lesson teaching material, not merely a summary or topic description.
+
+45. Keep the generated course focused, coherent, educational, and appropriate for the requested topic, difficulty, and duration.
 """
-
 
 def generate_course_with_ai(topic, difficulty, duration):
     ai_mode = os.getenv("AI_MODE", "development").lower()
@@ -152,11 +332,17 @@ def generate_gemini_course(topic, difficulty, duration):
             difficulty=difficulty,
             duration=duration,
         )
+        print("### generate_gemini_course() IS RUNNING ###")
 
         response = client.models.generate_content(
             model="gemini-3.5-flash",
             contents=prompt,
         )
+
+        print("\n========== GEMINI RAW COURSE RESPONSE ==========")
+        print(response.text)
+        print("================================================\n")
+        
 
         if not response.text:
             return {
@@ -820,14 +1006,22 @@ Requirements:
 15. Each question must have exactly four options.
 16. The options must use option_a, option_b, option_c, and option_d.
 17. The correct_answer must contain only one of: A, B, C, or D.
-18. The correct answer must actually match one of the four options.
+18. The correct answer must actually match the option identified by correct_answer.
 19. Provide a clear explanation for the correct answer.
 20. Avoid ambiguous questions.
-21. Avoid duplicate questions. If a concept has multiple questions, each question must be meaningfully different.
+21. Avoid duplicate questions. If a concept has multiple questions, each question must be meaningfully different in wording, situation, reasoning, or application.
 22. Questions should be appropriate for revision practice.
-23. Do not include markdown or code fences.
-24. Do not include fields outside the requested JSON structure.
-25. Do not calculate or invent unrelated information.
+
+23. VARY THE CORRECT ANSWER POSITION NATURALLY.
+24. Do not make the correct answer the same option for every question.
+25. Do not repeatedly place the correct answer in the same option when other positions can be used.
+26. Across the complete quiz, use different correct-answer positions among A, B, C, and D where the number of questions allows it.
+27. Do not use a fixed A-B-C-D sequence merely to satisfy this requirement.
+28. Choose the correct answer position based on the question and its options. Never make an incorrect option correct just to vary its position.
+
+29. Do not include markdown or code fences.
+30. Do not include fields outside the requested JSON structure.
+31. Do not calculate or invent unrelated information.
 """
 
 def generate_revision_quiz_with_ai(
@@ -885,17 +1079,42 @@ def generate_development_revision_quiz(
             "Intermediate"
         )
 
-        if difficulty == "Beginner":
-            question = (
-                f"Revision check {question_number + 1}: "
-                f"Which statement best describes "
-                f"the basic idea of {concept_name}?"
-            )
+        variation = question_number % 3
 
-            option_a = (
-                f"{concept_name} is a fundamental concept "
-                f"covered in the course."
-            )
+        if difficulty == "Beginner":
+
+            if variation == 0:
+                question = (
+                    f"Which statement best describes "
+                    f"the basic idea of {concept_name}?"
+                )
+
+                correct_option = (
+                    f"{concept_name} is a fundamental concept "
+                    f"covered in the course."
+                )
+
+            elif variation == 1:
+                question = (
+                    f"Which statement shows the main purpose "
+                    f"of {concept_name}?"
+                )
+
+                correct_option = (
+                    f"{concept_name} helps explain an important "
+                    f"idea related to the course topic."
+                )
+
+            else:
+                question = (
+                    f"Which description is most appropriate "
+                    f"for {concept_name}?"
+                )
+
+                correct_option = (
+                    f"{concept_name} represents a fundamental "
+                    f"idea that the learner should understand."
+                )
 
             explanation = (
                 f"This Beginner-level revision question "
@@ -904,18 +1123,43 @@ def generate_development_revision_quiz(
             )
 
         elif difficulty == "Advanced":
-            question = (
-                f"Revision check {question_number + 1}: "
-                f"Which explanation best accounts for how "
-                f"{concept_name} should be applied in a "
-                f"more complex situation?"
-            )
 
-            option_a = (
-                f"{concept_name} should be analyzed using "
-                f"its underlying principles and applied "
-                f"appropriately to the situation."
-            )
+            if variation == 0:
+                question = (
+                    f"Which explanation best accounts for how "
+                    f"{concept_name} should be applied in a "
+                    f"more complex situation?"
+                )
+
+                correct_option = (
+                    f"{concept_name} should be analyzed using "
+                    f"its underlying principles and applied "
+                    f"appropriately to the situation."
+                )
+
+            elif variation == 1:
+                question = (
+                    f"Which approach best demonstrates deeper "
+                    f"reasoning about {concept_name}?"
+                )
+
+                correct_option = (
+                    f"The learner should consider the underlying "
+                    f"principles of {concept_name} and evaluate "
+                    f"how they apply to the given situation."
+                )
+
+            else:
+                question = (
+                    f"Which statement best reflects an advanced "
+                    f"application of {concept_name}?"
+                )
+
+                correct_option = (
+                    f"{concept_name} should be evaluated in "
+                    f"context by considering its principles, "
+                    f"constraints, and appropriate application."
+                )
 
             explanation = (
                 f"This Advanced-level revision question "
@@ -924,16 +1168,41 @@ def generate_development_revision_quiz(
             )
 
         else:
-            question = (
-                f"Revision check {question_number + 1}: "
-                f"Which situation best demonstrates the "
-                f"application of {concept_name}?"
-            )
 
-            option_a = (
-                f"Applying the principles of {concept_name} "
-                f"to an appropriate practical situation."
-            )
+            if variation == 0:
+                question = (
+                    f"Which situation best demonstrates the "
+                    f"application of {concept_name}?"
+                )
+
+                correct_option = (
+                    f"Applying the principles of {concept_name} "
+                    f"to an appropriate practical situation."
+                )
+
+            elif variation == 1:
+                question = (
+                    f"Which example best shows how {concept_name} "
+                    f"can be used in practice?"
+                )
+
+                correct_option = (
+                    f"Using the principles of {concept_name} "
+                    f"to solve or understand an appropriate "
+                    f"practical problem."
+                )
+
+            else:
+                question = (
+                    f"Which statement best explains the practical "
+                    f"use of {concept_name}?"
+                )
+
+                correct_option = (
+                    f"{concept_name} can be applied by using "
+                    f"its principles to address a relevant "
+                    f"practical situation."
+                )
 
             explanation = (
                 f"This Intermediate-level revision question "
@@ -941,20 +1210,40 @@ def generate_development_revision_quiz(
                 f"{concept_name}."
             )
 
+        distractors = [
+            "It is unrelated to the course.",
+            "It is used only for entertainment.",
+            "It has no educational relevance.",
+        ]
+
+        options = [
+            correct_option,
+            distractors[0],
+            distractors[1],
+            distractors[2],
+        ]
+
+        # Vary the correct-answer position.
+        # This is only for the development fallback.
+        correct_index = question_number % 4
+
+        rotated_options = (
+            options[correct_index:]
+            + options[:correct_index]
+        )
+
+        correct_answers = ["A", "B", "C", "D"]
+
         questions.append(
             {
                 "question": question,
-                "option_a": option_a,
-                "option_b": (
-                    "It is unrelated to the course."
-                ),
-                "option_c": (
-                    "It is used only for entertainment."
-                ),
-                "option_d": (
-                    "It has no educational relevance."
-                ),
-                "correct_answer": "A",
+                "option_a": rotated_options[0],
+                "option_b": rotated_options[1],
+                "option_c": rotated_options[2],
+                "option_d": rotated_options[3],
+                "correct_answer": correct_answers[
+                    (0 - correct_index) % 4
+                ],
                 "explanation": explanation,
                 "concept_name": concept_name,
             }
@@ -990,6 +1279,7 @@ def generate_development_revision_quiz(
     return {
         "questions": questions
     }
+
 
 def generate_gemini_revision_quiz(
     course_id,
@@ -1093,10 +1383,24 @@ def validate_revision_quiz_response(
             "question for every due concept."
         )
 
-    normalized_questions = [
-        question["question"].strip().lower()
-        for question in questions
-    ]
+    # ---------------------------------------------------------
+    # Check for duplicate questions
+    # ---------------------------------------------------------
+
+    normalized_questions = []
+
+    for question in questions:
+        question_text = question["question"].strip().lower()
+
+        # Ignore the development-generator prefix
+        # "Revision check N:" when checking duplicates.
+        if question_text.startswith("revision check "):
+            if ":" in question_text:
+                question_text = (
+                    question_text.split(":", 1)[1].strip()
+                )
+
+        normalized_questions.append(question_text)
 
     if len(normalized_questions) != len(
         set(normalized_questions)
@@ -1104,6 +1408,43 @@ def validate_revision_quiz_response(
         return (
             "Revision quiz contains duplicate questions."
         )
+
+    # ---------------------------------------------------------
+    # Check correct-answer position distribution
+    # ---------------------------------------------------------
+
+    answer_positions = [
+        question["correct_answer"].strip().upper()
+        for question in questions
+    ]
+
+    if len(answer_positions) > 1:
+        unique_positions = set(answer_positions)
+
+        if len(unique_positions) == 1:
+            return (
+                "Revision quiz must vary the correct "
+                "answer position across questions."
+            )
+
+        position_counts = {
+            position: answer_positions.count(position)
+            for position in {"A", "B", "C", "D"}
+        }
+
+        maximum_position_count = max(
+            position_counts.values()
+        )
+
+        allowed_maximum = (
+            (len(answer_positions) + 1) // 2
+        )
+
+        if maximum_position_count > allowed_maximum:
+            return (
+                "Revision quiz contains an overly repeated "
+                "correct answer position."
+            )
 
     return None
 

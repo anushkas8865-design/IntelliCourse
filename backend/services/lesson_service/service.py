@@ -247,64 +247,115 @@ def search_youtube_videos(lesson_title):
     if not api_key:
         return []
 
-    params = urlencode(
-        {
-            "part": "snippet",
-            "q": lesson_title,
-            "type": "video",
-            "maxResults": YOUTUBE_MAX_RESULTS,
-            "key": api_key
-        }
-    )
+    # Remove common instructional/generic words so the search
+    # focuses on the actual lesson topic.
+    generic_words = {
+        "a",
+        "an",
+        "and",
+        "the",
+        "of",
+        "to",
+        "for",
+        "in",
+        "on",
+        "with",
+        "using",
+        "introduction",
+        "understanding",
+        "practical",
+        "fundamentals",
+        "fundamental",
+        "basics",
+        "basic",
+        "advanced",
+        "overview",
+        "guide",
+        "tutorial",
+    }
 
-    request = Request(
-        f"{YOUTUBE_API_URL}?{params}",
-        method="GET"
-    )
+    words = lesson_title.split()
 
-    try:
-        with urlopen(request, timeout=30) as response:
-            data = json.loads(
-                response.read().decode("utf-8")
-            )
+    keywords = [
+        word.strip(".,:;!?()[]{}").lower()
+        for word in words
+        if word.strip(".,:;!?()[]{}").lower() not in generic_words
+    ]
 
-        videos = []
+    # Keep the original title if keyword processing produces
+    # nothing useful.
+    primary_query = " ".join(keywords).strip()
 
-        for item in data.get("items", []):
-            video_id = item.get(
-                "id",
-                {}
-            ).get("videoId")
+    if not primary_query:
+        primary_query = lesson_title.strip()
 
-            snippet = item.get(
-                "snippet",
-                {}
-            )
+    queries = [primary_query]
 
-            if not video_id:
-                continue
+    # Create one broader fallback query from the first
+    # meaningful keywords if the primary search is insufficient.
+    if len(keywords) > 3:
+        fallback_query = " ".join(keywords[:3]).strip()
 
-            videos.append(
-                {
-                    "title": snippet.get(
-                        "title",
-                        ""
-                    ),
-                    "youtube_url": (
-                        f"https://www.youtube.com/watch?v={video_id}"
-                    )
-                }
-            )
+        if fallback_query and fallback_query != primary_query:
+            queries.append(fallback_query)
 
-        return videos
+    videos = []
+    seen_video_ids = set()
 
-    except (
-        HTTPError,
-        URLError,
-        json.JSONDecodeError
-    ):
-        return []
+    for query in queries:
+        params = urlencode(
+            {
+                "part": "snippet",
+                "q": query,
+                "type": "video",
+                "maxResults": YOUTUBE_MAX_RESULTS,
+                "key": api_key
+            }
+        )
 
+        request = Request(
+            f"{YOUTUBE_API_URL}?{params}",
+            method="GET"
+        )
+
+        try:
+            with urlopen(request, timeout=30) as response:
+                data = json.loads(
+                    response.read().decode("utf-8")
+                )
+
+            for item in data.get("items", []):
+                video_id = item.get("id", {}).get("videoId")
+                snippet = item.get("snippet", {})
+
+                if not video_id:
+                    continue
+
+                if video_id in seen_video_ids:
+                    continue
+
+                seen_video_ids.add(video_id)
+
+                videos.append(
+                    {
+                        "title": snippet.get("title", ""),
+                        "youtube_url": (
+                            f"https://www.youtube.com/watch?v={video_id}"
+                        )
+                    }
+                )
+
+                if len(videos) >= YOUTUBE_MAX_RESULTS:
+                    return videos
+
+        except (
+            HTTPError,
+            URLError,
+            json.JSONDecodeError
+        ):
+            continue
+
+    return videos
 
 # ---------------------------------------------------------
 # LESSON CONTENT
@@ -379,6 +430,51 @@ def get_videos_by_lesson_id(lesson_id):
             .all()
         )
 
+        # If videos already exist, keep the existing
+        # database-first behavior.
+        if videos:
+            return [
+                {
+                    "video_id": video.video_id,
+                    "lesson_id": video.lesson_id,
+                    "title": video.title,
+                    "youtube_url": video.youtube_url
+                }
+                for video in videos
+            ]
+
+        # No stored videos exist, so get the lesson title
+        # and search YouTube as a fallback.
+        lesson = (
+            db.query(Lesson)
+            .filter(
+                Lesson.lesson_id == lesson_id
+            )
+            .first()
+        )
+
+        if lesson is None:
+            return []
+
+        youtube_videos = search_youtube_videos(
+            lesson.title
+        )
+
+        # Store the newly found videos so that future requests
+        # use the database instead of searching YouTube again.
+        for video_data in youtube_videos:
+            video = LessonVideo(
+                lesson_id=lesson_id,
+                title=video_data["title"],
+                youtube_url=video_data["youtube_url"]
+            )
+
+            db.add(video)
+
+        if youtube_videos:
+            db.commit()
+
+        # Return the same response structure used previously.
         return [
             {
                 "video_id": video.video_id,
@@ -386,12 +482,17 @@ def get_videos_by_lesson_id(lesson_id):
                 "title": video.title,
                 "youtube_url": video.youtube_url
             }
-            for video in videos
+            for video in (
+                db.query(LessonVideo)
+                .filter(
+                    LessonVideo.lesson_id == lesson_id
+                )
+                .all()
+            )
         ]
 
     finally:
         db.close()
-
 
 # ---------------------------------------------------------
 # QUIZ GENERATION

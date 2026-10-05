@@ -104,3 +104,34 @@
     font-size: 27px;
   }
 }
+.settings-page {
+  min-height: 100vh;
+  background: #f7f8fc;
+  padding: 0;
+  color: #172554;
+  display: flex;
+}
+
+.settings-main {
+  flex: 1;
+  min-width: 0;
+  padding: 40px;
+}
+
+.settings-container {
+  max-width: 850px;
+  margin: 0 auto;
+}
+@media (max-width: 600px) {
+  .settings-main {
+    padding: 24px 18px;
+  }
+
+  .settings-card {
+    padding: 22px;
+  }
+
+  .settings-header h1 {
+    font-size: 27px;
+  }
+}
