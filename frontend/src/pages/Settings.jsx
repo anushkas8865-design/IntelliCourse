@@ -47,11 +47,6 @@ function Settings() {
             Revision Quizzes
           </button>
 
-          <button className="nav-item">
-            <span>✦</span>
-            AI Assistant
-          </button>
-
           <button
             className="nav-item active"
             onClick={() => navigate('/settings')}

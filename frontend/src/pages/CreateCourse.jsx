@@ -99,11 +99,6 @@ function CreateCourse() {
             Revision Quizzes
           </button>
 
-          <button className="nav-item">
-            <span>✦</span>
-            AI Assistant
-          </button>
-
           <button
             className="nav-item"
             onClick={() => navigate('/settings')}

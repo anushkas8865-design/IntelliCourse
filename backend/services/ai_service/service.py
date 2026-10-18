@@ -423,43 +423,57 @@ def validate_course_response(course_data):
 
 def build_lesson_prompt(course_id, title, sequence_number):
     return f"""
-You are an AI lesson-generation assistant.
+You are an experienced teacher and educational content developer.
 
-Generate a detailed educational lesson for an existing course.
+Create a detailed, accurate, beginner-friendly lesson for the
+following existing course.
 
 Course ID: {course_id}
 Lesson Title: {title}
 Lesson Sequence Number: {sequence_number}
 
-Return ONLY valid JSON.
+IMPORTANT:
+Teach the actual topic in the lesson title. Do not merely describe
+what the lesson will teach. Avoid generic filler sentences.
 
-The JSON must contain exactly these fields:
+Adapt the explanation and examples to the subject:
+- For grammar, explain rules and provide correct sentence examples.
+- For programming, explain concepts and provide relevant code examples.
+- For mathematics, explain concepts with worked examples where useful.
+- For other subjects, use appropriate explanations and practical examples.
+
+Return ONLY one valid JSON object with exactly these fields:
 
 {{
     "title": "string",
-    "objectives": [
-        "string"
-    ],
+    "objectives": ["string"],
     "explanation": "string",
-    "real_world_examples": [
-        "string"
-    ],
+    "real_world_examples": ["string"],
     "summary": "string",
     "sequence_number": {sequence_number}
 }}
 
-Requirements:
+CONTENT REQUIREMENTS:
 
-1. The lesson must be directly related to the provided lesson title.
-2. The lesson must be suitable for an educational course.
-3. Provide clear and measurable learning objectives.
-4. Provide a detailed but understandable explanation of the lesson topic.
-5. Include relevant real-world examples.
-6. Provide a concise summary of the lesson.
-7. Preserve the provided sequence number.
-8. Do not invent unrelated course information.
-9. Do not include markdown or code fences.
-10. Do not include fields outside the requested JSON structure.
+1. Preserve the exact lesson title and sequence number.
+2. Provide 3 to 5 specific, measurable learning objectives.
+3. Write a detailed explanation of approximately 300 to 500 words.
+4. Start with a clear definition or introduction to the actual topic.
+5. Explain the important concepts, rules, steps, or principles
+   appropriate to this topic.
+6. Organize the explanation using readable paragraphs and meaningful
+   headings where useful. Use plain text, not Markdown formatting.
+7. Include relevant examples within the explanation when appropriate.
+8. Provide at least 3 specific, topic-related real-world or
+   practical examples. Explain why each example is relevant.
+9. Include common mistakes or misconceptions when relevant.
+10. Write a useful summary of approximately 40 to 80 words.
+11. Avoid repetition, vague statements, invented facts, and filler.
+12. Do not assume course details that were not provided.
+13. Use simple language suitable for a learner new to the topic.
+14. Return non-empty strings and lists containing meaningful content.
+15. Do not include Markdown code fences or text outside the JSON.
+16. Do not add fields beyond the specified JSON structure.
 """
 
 
@@ -544,6 +558,7 @@ def generate_gemini_lesson(course_id, title, sequence_number):
 
         validation_error = validate_lesson_response(
             lesson_data,
+            title,
             sequence_number,
         )
 
@@ -569,36 +584,80 @@ def generate_gemini_lesson(course_id, title, sequence_number):
         }
 
 
-def validate_lesson_response(lesson_data, sequence_number):
+def validate_lesson_response(lesson_data, title, sequence_number):
     if not isinstance(lesson_data, dict):
         return "AI lesson response must be a JSON object."
 
-    required_fields = [
+    required_fields = {
         "title",
         "objectives",
         "explanation",
         "real_world_examples",
         "summary",
         "sequence_number",
-    ]
+    }
 
-    for field in required_fields:
-        if field not in lesson_data:
-            return f"AI lesson response is missing required field: {field}."
+    if set(lesson_data.keys()) != required_fields:
+        return (
+            "AI lesson response must contain exactly the "
+            "required fields."
+        )
+
+    if not isinstance(lesson_data["title"], str):
+        return "title must be a string."
+
+    if not lesson_data["title"].strip():
+        return "title cannot be empty."
+
+    if lesson_data["title"].strip() != title.strip():
+        return "AI lesson response has an incorrect title."
 
     if not isinstance(lesson_data["objectives"], list):
         return "objectives must be a list."
 
-    if not isinstance(lesson_data["real_world_examples"], list):
-        return "real_world_examples must be a list."
+    if not 3 <= len(lesson_data["objectives"]) <= 5:
+        return "Lesson must contain 3 to 5 learning objectives."
+
+    if not all(
+        isinstance(item, str) and item.strip()
+        for item in lesson_data["objectives"]
+    ):
+        return "Every learning objective must be a non-empty string."
 
     if not isinstance(lesson_data["explanation"], str):
         return "explanation must be a string."
 
+    if len(lesson_data["explanation"].strip().split()) < 150:
+        return "Lesson explanation is too short."
+
+    if not isinstance(lesson_data["real_world_examples"], list):
+        return "real_world_examples must be a list."
+
+    if len(lesson_data["real_world_examples"]) < 3:
+        return "Lesson must contain at least 3 practical examples."
+
+    if not all(
+        isinstance(item, str) and len(item.strip().split()) >= 8
+        for item in lesson_data["real_world_examples"]
+    ):
+        return (
+            "Every practical example must be a non-empty, "
+            "meaningful explanation."
+        )
+
     if not isinstance(lesson_data["summary"], str):
         return "summary must be a string."
 
-    if lesson_data["sequence_number"] != sequence_number:
+    summary_words = len(lesson_data["summary"].strip().split())
+
+    if not 25 <= summary_words <= 120:
+        return "Lesson summary must contain 25 to 120 words."
+
+    if (
+        isinstance(lesson_data["sequence_number"], bool)
+        or not isinstance(lesson_data["sequence_number"], int)
+        or lesson_data["sequence_number"] != sequence_number
+    ):
         return "AI lesson response has an incorrect sequence number."
 
     return None

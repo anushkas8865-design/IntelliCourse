@@ -190,11 +190,6 @@ function MyCourses() {
               Revision Quizzes
             </button>
 
-            <button className="nav-item">
-              <span>✦</span>
-              AI Assistant
-            </button>
-
             <button
               className="nav-item"
               onClick={() => navigate('/settings')}
@@ -277,11 +272,6 @@ function MyCourses() {
               Revision Quizzes
             </button>
 
-            <button className="nav-item">
-              <span>✦</span>
-              AI Assistant
-            </button>
-
             <button
               className="nav-item"
               onClick={() => navigate('/settings')}
@@ -361,11 +351,6 @@ function MyCourses() {
           >
             <span>↻</span>
             Revision Quizzes
-          </button>
-
-          <button className="nav-item">
-            <span>✦</span>
-            AI Assistant
           </button>
 
           <button

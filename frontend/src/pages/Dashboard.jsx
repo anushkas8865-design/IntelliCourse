@@ -227,14 +227,6 @@ function Dashboard() {
           <button
             type="button"
             className="nav-item"
-          >
-            <span>✦</span>
-            AI Assistant
-          </button>
-
-          <button
-            type="button"
-            className="nav-item"
             onClick={() => navigate('/settings')}
           >
             <span>⚙</span>
