@@ -6,16 +6,14 @@ Build personalized learning paths. Track concept mastery. Revise at the right ti
   <img src="https://img.shields.io/badge/Database-PostgreSQL-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/AI-Google%20Gemini-8E75B2?logo=googlegemini&logoColor=white" alt="Google Gemini" />
   <img src="https://img.shields.io/badge/Build-Vite-646CFF?logo=vite&logoColor=white" alt="Vite" />
-</p></div>
-
-📌 Table of Contents
+</p></div>📌 Table of Contents
 - 📖 Overview
 - ✨ Key Features
 - 🧠 Adaptive Learning Modules
-  - AI Knowledge Dependency Graph (AKDG)
-  - Learner Digital Twin (LDT)
-  - Adaptive Memory Retention Engine (AMRE)
-  - Adaptive Revision Quizzes
+  - 1. AI Knowledge Dependency Graph (AKDG)
+  - 2. Learner Digital Twin (LDT)
+  - 3. Adaptive Memory Retention Engine (AMRE)
+  - 4. Adaptive Revision Quizzes
 - 🏗️ System Architecture
 - 🛠️ Technology Stack
 - ⚙️ Local Setup
@@ -77,42 +75,40 @@ Note: These values are design choices specific to this project and have not been
 
 4. Adaptive Revision Quizzes
 When concepts become due for review, the application can generate a revision quiz for the relevant course. The quiz covers the due concepts and adjusts each concept's difficulty by one level according to the learner's most recent concept-level accuracy.
-
 🏗️ System Architecture
 The application uses a React single-page frontend, a Flask API Gateway, and five Flask services. The services use a shared PostgreSQL database through SQLAlchemy.
 
 The frontend communicates with the backend through the API Gateway. The AI Service handles prompt construction, Gemini requests, development-mode generators, and response validation. The AI Service is not directly exposed through the Gateway.
-
 Service Overview
-Component	           Port	                 Responsibility
-🖥️ Frontend	        5173	         React user interface
-🌐 API Gateway	       5000	            Entry point for frontend requests and request routing
-🔐 Auth Service	       5001	            Registration, login, profile endpoints, password hashing, and JWT handling
-📚 Course Service	   5002	            Course generation orchestration, course and lesson persistence, and AKDG pipeline
-🤖 AI Service	       5003	            AI prompts, Gemini calls, development generators, and response validation
-📝 Lesson Service	   5004	            Lesson operations, YouTube search, quizzes, revision quizzes, coding challenges, and evaluation
-📊 Progress Service	   5005	            Progress, concept history, LDT, AMRE, and due-concept queries
-🐘 PostgreSQL            —	            Shared relational database
+Component	Port	Responsibility
+🖥️ Frontend	5173	React user interface
+🌐 API Gateway	5000	Entry point for frontend requests and request routing
+🔐 Auth Service	5001	Registration, login, profile endpoints, password hashing, and JWT handling
+📚 Course Service	5002	Course generation orchestration, course and lesson persistence, and AKDG pipeline
+🤖 AI Service	5003	AI prompts, Gemini calls, development generators, and response validation
+📝 Lesson Service	5004	Lesson operations, YouTube search, quizzes, revision quizzes, coding challenges, and evaluation
+📊 Progress Service	5005	Progress, concept history, LDT, AMRE, and due-concept queries
+🐘 PostgreSQL	—	Shared relational database
 
 
 The database design documented in the project dissertation contains 15 tables.
 🛠️ Technology Stack
-Layer	                          Technology
-Frontend	                    React 19, JavaScript
-Build Tool	                    Vite
-Routing	                        React Router DOM
-Frontend Styling                Custom CSS
-Frontend HTTP Communication	    Browser Fetch API
-Backend	                        Python, Flask
-Architecture	                Flask API Gateway and five Flask services
-Database	                    PostgreSQL
-ORM	                            SQLAlchemy
-Authentication	                Flask-JWT-Extended
-Password Hashing	            Werkzeug security
-Generative AI SDK	            google-genai
-Generative AI Model	            gemini-3.5-flash
-Video Search	                YouTube Data API v3
-Backend Test Runner	            pytest
+Layer	Technology
+Frontend	React 19, JavaScript
+Build Tool	Vite
+Routing	React Router DOM
+Frontend Styling	Custom CSS
+Frontend HTTP Communication	Browser Fetch API
+Backend	Python, Flask
+Architecture	Flask API Gateway and five Flask services
+Database	PostgreSQL
+ORM	SQLAlchemy
+Authentication	Flask-JWT-Extended
+Password Hashing	Werkzeug security
+Generative AI SDK	google-genai
+Generative AI Model	gemini-3.5-flash
+Video Search	YouTube Data API v3
+Backend Test Runner	pytest
 
 
 ⚙️ Local Setup
@@ -124,12 +120,12 @@ The project dissertation lists the following requirements:
 - A configured backend environment file
 1. Configure Environment Variables
 Create or configure backend/.env with the variables below. Use your own local values.
-Variable	      Purpose
-DATABASE_URL	  PostgreSQL connection URI
-JWT_SECRET_KEY	  Secret used to sign and verify JWTs
-GEMINI_API_KEY	  Google Gemini API key
-AI_MODE	          gemini for Gemini API calls or development for local mock generators
-YOUTUBE_API_KEY	  API key for YouTube Data API v3 searches
+Variable	Purpose
+DATABASE_URL	PostgreSQL connection URI
+JWT_SECRET_KEY	Secret used to sign and verify JWTs
+GEMINI_API_KEY	Google Gemini API key
+AI_MODE	gemini for Gemini API calls or development for local mock generators
+YOUTUBE_API_KEY	API key for YouTube Data API v3 searches
 
 
 [!IMPORTANT]
@@ -192,7 +188,6 @@ The frontend sends backend requests to the API Gateway at http://127.0.0.1:5000.
 8. ✅ Complete lessons and review progress on the dashboard.
 9. 🔄 Open Revision Quizzes to see concepts due for review.
 10. 📊 Start a revision quiz for a course and review the recorded attempt.
-
 🧪 Testing and Evaluation
 The project dissertation documents several forms of evidence, including manual functional checks, API checks, database testing, source-code/commit analysis, screenshots, and analytical verification of LDT and AMRE rules.
 - The report records one automated database test for database connectivity and user CRUD operations.
@@ -209,7 +204,6 @@ Evaluation note: The dissertation does not report a user study, a formal evaluat
 - Gemini and YouTube functionality depends on external API availability and quotas.
 - The system uses a shared database across services.
 - The dissertation identifies limited testing evidence and no formal performance, security, or usability assessment.
-
 🔮 Future Scope
 The following enhancements are identified as future work in the project dissertation. They are not presented as implemented features.
 - 💬 AI Doubt Solver within the lesson view.
@@ -220,6 +214,5 @@ The following enhancements are identified as future work in the project disserta
 - 👥 Role-based access, social login, and email password reset.
 - 📘 Richer lesson content and user editing/reordering of the syllabus.
 - 📈 Further evaluation of learning outcomes, AI content quality, accessibility, scalability, reliability, security, and deployment.
-
 📚 Project Report
 The project dissertation contains the detailed literature survey, requirements, architecture, database design, methodology, implementation, testing evidence, results, limitations, and future work.
